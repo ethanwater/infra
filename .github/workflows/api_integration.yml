@@ -1,0 +1,68 @@
+name: API Endpoint Testing Workflow
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.21
+
+    - name: Build and Test
+      run: |
+        go build ./...
+        #go test -v ./...
+        
+    - name: Run EchoResponse Test
+      run: |
+        go run build/main.go &  
+        sleep 5  
+        response=$(curl -s "http://127.0.0.1:8080/bella/echo=cat")
+        if [[ "$response" == *"cat"* ]]; then
+          echo "Test passed: EchoResponseHandler returned the expected input."
+        else
+          echo "Test failed: EchoResponseHandler did not return the expected input."
+          exit 1
+        fi
+    
+    - name: Run 2FA Test
+      run: |
+        go run build/main.go &
+        sleep 5
+
+        generate_response=$(curl -s "http://127.0.0.1:8080/bella/2FA?action=generate" | tr -d '"')
+        echo "Generate Response: $generate_response"
+
+        if [[ "$generate_response" != *"cat"* ]]; then
+          echo "Test passed: Generate2FA returned the expected input."
+        else
+          echo "Test failed: Generate2FA did not return the expected input."
+          exit 1
+        fi
+
+        verify_response=$(curl -s "http://127.0.0.1:8080/bella/2FA?action=verify&key=$generate_response")
+        echo "Verify Response: $verify_response"
+
+        if [[ "$verify_response" == *"true"* ]]; then
+          echo "Test passed: Verify2FA returned the expected input."
+        else
+          echo "Test failed: Verify2FA did not return the expected input."
+          exit 1
+        fi
+
+        clear_2FA_cache=$(curl -s "http://127.0.0.1:8080/bella/2FA?action=expire")
+
+
+    - name: Stop the server
+      run: pkill -f "build/main.go" || true  
