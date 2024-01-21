@@ -32,22 +32,33 @@ type HashManager struct {
 
 var HashManagerAtomic HashManager
 
-func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, error) {
-	source := rand.New(rand.NewSource(time.Now().Unix()))
-	var authKey strings.Builder
+func init() {
+	HashManagerAtomic.flag = 1
+}
 
-	for i := 0; i < authKeySize; i++ {
-		sample := source.Intn(len(charset))
-		authKey.WriteString(string(charset[sample]))
+func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, error) {
+	if HashManagerAtomic.flag == 0 {
+		return "", errors.New("2FA has already been generated")
 	}
 
 	HashManagerAtomic.flag = 0
-
+	
+	authKeyGeneration := func() string {
+		source := rand.New(rand.NewSource(time.Now().Unix()))
+			var authKey strings.Builder
+			for i := 0; i < authKeySize; i++ {
+				sample := source.Intn(len(charset))
+				authKey.WriteString(string(charset[sample]))
+			}
+			return authKey.String()
+	}
+	authKey := authKeyGeneration()
+	
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		authKeyHash, err := HashKeyphrase(ctx, authKey.String())
+		authKeyHash, err := HashKeyphrase(ctx, authKey)
 		if err != nil {
 			s.LogError("Failure during hashing process", err)
 			return
@@ -63,8 +74,8 @@ func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, err
 		return "", nil
 	}
 
-	s.LogSuccess(fmt.Sprintf("Authentication key generated: %v", authKey.String()))
-	return authKey.String(), nil
+	s.LogSuccess(fmt.Sprintf("Authentication key generated: %v", authKey))
+	return authKey, nil
 }
 
 func VerifyAuthKey2FA(ctx context.Context, key string, s *utils.VivianLogger) (bool, error) {
