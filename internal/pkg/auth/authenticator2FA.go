@@ -15,11 +15,15 @@ import (
 )
 
 const (
-	charset     string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	authKeySize int    = 5
+	CHARSET       string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	AUTH_KEY_SIZE int    = 5
 )
 
-type T interface {
+type Authenticator interface {
+	//Login
+	LoginUser(context.Context, string, string, *utils.VivianLogger) (bool, error)
+
+	//2FA
 	GenerateAuthKey2FA(context.Context, *utils.VivianLogger) (string, error)
 	VerifyAuthKey2FA(context.Context, string, *utils.VivianLogger) (bool, error)
 	ExpireAuthentication2FA(context.Context, *utils.VivianLogger) error
@@ -30,30 +34,30 @@ type HashManager struct {
 	flag        uint16
 }
 
-var HashManagerAtomic HashManager
+var hashManagerAtomic HashManager
 
 func init() {
-	HashManagerAtomic.flag = 1
+	hashManagerAtomic.flag = 1
 }
 
 func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, error) {
-	if HashManagerAtomic.flag == 0 {
+	if hashManagerAtomic.flag == 0 {
 		return "", errors.New("2FA has already been generated")
 	}
 
-	HashManagerAtomic.flag = 0
-	
+	hashManagerAtomic.flag = 0
+
 	authKeyGeneration := func() string {
 		source := rand.New(rand.NewSource(time.Now().Unix()))
-			var authKey strings.Builder
-			for i := 0; i < authKeySize; i++ {
-				sample := source.Intn(len(charset))
-				authKey.WriteString(string(charset[sample]))
-			}
-			return authKey.String()
+		var authKey strings.Builder
+		for i := 0; i < AUTH_KEY_SIZE; i++ {
+			sample := source.Intn(len(CHARSET))
+			authKey.WriteString(string(CHARSET[sample]))
+		}
+		return authKey.String()
 	}
 	authKey := authKeyGeneration()
-	
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -63,14 +67,14 @@ func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, err
 			s.LogError("Failure during hashing process", err)
 			return
 		}
-		HashManagerAtomic.atomicValue.Store([]byte(authKeyHash))
+		hashManagerAtomic.atomicValue.Store([]byte(authKeyHash))
 	}()
 	wg.Wait()
 
-	hash := HashManagerAtomic.atomicValue.Load().([]byte)
+	hash := hashManagerAtomic.atomicValue.Load().([]byte)
 
 	if hash == nil {
-		s.LogError("Failure fetching the authentication key", errors.New("No hash available"))
+		s.LogError("Failure fetching the authentication key", errors.New("no hash available"))
 		return "", nil
 	}
 
@@ -83,39 +87,40 @@ func VerifyAuthKey2FA(ctx context.Context, key string, s *utils.VivianLogger) (b
 	mu.Lock()
 	defer mu.Unlock()
 
-	if HashManagerAtomic.flag == 1 {
+	if hashManagerAtomic.flag == 1 {
 		s.LogWarning("2FA has not been initialized")
 		return false, nil
 	}
 
-	hash := HashManagerAtomic.atomicValue.Load()
+	hash := hashManagerAtomic.atomicValue.Load()
 	if hash == nil {
 		s.LogWarning("HashManager failure")
 		return false, nil
 	}
 
-	key = Sanitize(key)
-	if SanitizeCheck(key) {
-		err := bcrypt.CompareHashAndPassword(hash.([]byte), []byte(key)); if err != nil {
+	key = sanitize(key)
+	if sanitizeCheck(key) {
+		err := bcrypt.CompareHashAndPassword(hash.([]byte), []byte(key))
+		if err != nil {
 			s.LogWarning("Invalid key")
-			return false, err 
+			return false, err
 		} else {
 			s.LogSuccess("Verified key")
 			Expire2FA(ctx, s)
-			return true, nil 
+			return true, nil
 		}
 	}
 
-	return false, errors.New("Unable to Sanitize") //how the fuck would you get this anyways
+	return false, errors.New("unable to Sanitize") //how the fuck would you get this anyways
 }
 
 func Expire2FA(ctx context.Context, s *utils.VivianLogger) error {
-	if HashManagerAtomic.atomicValue.Load() == nil {
+	if hashManagerAtomic.atomicValue.Load() == nil {
 		err := errors.New("HashManager is already nil")
 		return err
 	}
-	HashManagerAtomic.atomicValue = atomic.Value{}
-	HashManagerAtomic.flag = 1
+	hashManagerAtomic.atomicValue = atomic.Value{}
+	hashManagerAtomic.flag = 1
 
 	s.LogDebug(fmt.Sprintf("Killing 2FA Key {expired at: %v}", time.Now().UTC()))
 	return nil

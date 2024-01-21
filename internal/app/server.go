@@ -18,10 +18,9 @@ import (
 )
 
 const (
-	VivianAppName      string        = "vivian.infra"
-	VivianHostAddr     string        = ":8080"
-	VivianReadTimeout  time.Duration = time.Second * 10
-	VivianWriteTimeout time.Duration = time.Second * 10
+	VIVIAN_APP_NAME          string        = "vivian.infra"
+	VIVIAN_HOST_ADDR         string        = ":8080"
+	VIVIAN_READWRITE_TIMEOUT time.Duration = time.Second * 10
 )
 
 type ServerInitialization interface {
@@ -71,20 +70,19 @@ func buildServer(ctx context.Context, logger *log.Logger) *Server {
 
 		return shortUUID
 	}
-
 	deploymentID := generateDeploymentID()
-	router := mux.NewRouter()
 
+	router := mux.NewRouter()
 	server := &Server{
 		DeploymentID:       deploymentID,
 		Logger:             &utils.VivianLogger{Logger: logger, DeploymentID: deploymentID},
 		Handler:            router,
-		Addr:               VivianHostAddr,
-		VivianReadTimeout:  VivianReadTimeout,
-		VivianWriteTimeout: VivianWriteTimeout,
+		Addr:               VIVIAN_HOST_ADDR,
+		VivianReadTimeout:  VIVIAN_READWRITE_TIMEOUT,
+		VivianWriteTimeout: VIVIAN_READWRITE_TIMEOUT,
 	}
 
-	router.Handle("/{user}/2FA", Authentication2FA(ctx, server)).Methods("GET")
-
+	//2FA handlers are called onyl after the user is verified via Login
+	router.Handle("/{user}/2FA", authentication2FA(ctx, server)).Methods("GET")
 	return server
 }

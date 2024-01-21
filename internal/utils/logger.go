@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	VivianAppName       string = "vivian.infra"
-	VivianLoggerSuccess string = "[vivian:success]"
-	VivianLoggerDebug 	string = "[vivian:debug]"
-	VivianLoggerWarning string = "[vivian:warn]"
-	VivianLoggerError   string = "[vivian:error]"
-	VivianLoggerFatal   string = "[vivian:fatal]"
+	VIVIAN_APP_NAME       string = "vivian.infra"
+	VIVIAN_LOGGER_SUCCESS string = "[vivian:success]"
+	VIVIAN_LOGGER_DEBUG   string = "[vivian:debug]"
+	VIVIAN_LOGGER_WARNING string = "[vivian:warn]"
+	VIVIAN_LOGGER_ERROR   string = "[vivian:error]"
+	VIVIAN_LOGGER_FATAL   string = "[vivian:fatal]"
 )
 
 type VivianLogger struct {
@@ -47,28 +47,28 @@ func (s *VivianLogger) logMessage(logLevel, msg string) {
 
 func (s *VivianLogger) LogDeployment() {
 	fmt.Printf("╭───────────────────────────────────────────────────╮\n")
-	fmt.Printf("│ app        : %-45s │\n", color.Ize(color.Cyan, VivianAppName))
+	fmt.Printf("│ app        : %-45s │\n", color.Ize(color.Cyan, VIVIAN_APP_NAME))
 	fmt.Printf("│ deployment : %-36s │\n", color.Ize(color.Purple, s.DeploymentID))
 	fmt.Printf("╰───────────────────────────────────────────────────╯\n")
 }
 
 func (s *VivianLogger) LogSuccess(msg string) {
-	s.logMessage(color.Ize(color.Green, VivianLoggerSuccess), msg)
+	s.logMessage(color.Ize(color.Green, VIVIAN_LOGGER_SUCCESS), msg)
 }
 
 func (s *VivianLogger) LogDebug(msg string) {
-	s.logMessage(color.Ize(color.Cyan, VivianLoggerDebug), msg)
+	s.logMessage(color.Ize(color.Cyan, VIVIAN_LOGGER_DEBUG), msg)
 }
 
 func (s *VivianLogger) LogWarning(msg string) {
-	s.logMessage(color.Ize(color.Yellow, VivianLoggerWarning), msg)
+	s.logMessage(color.Ize(color.Yellow, VIVIAN_LOGGER_WARNING), msg)
 }
 
 func (s *VivianLogger) LogError(msg string, err error) {
-	s.logMessage(color.Ize(color.Red, VivianLoggerError), color.Ize(color.Yellow, fmt.Sprintf("%s error: %s", msg, err)))
+	s.logMessage(color.Ize(color.Red, VIVIAN_LOGGER_ERROR), color.Ize(color.Yellow, fmt.Sprintf("%s error: %s", msg, err)))
 }
 
 func (s *VivianLogger) LogFatal(msg string) {
-	s.logMessage(color.Ize(color.RedBackground, VivianLoggerFatal), msg)
+	s.logMessage(color.Ize(color.RedBackground, VIVIAN_LOGGER_FATAL), msg)
 	os.Exit(1)
 }

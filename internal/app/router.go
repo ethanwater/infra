@@ -3,15 +3,15 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"errors"
 	"strings"
 
 	"vivian.infra/internal/pkg/auth"
 )
 
-func Authentication2FA(ctx context.Context, server *Server) http.Handler {
+func authentication2FA(ctx context.Context, server *Server) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		//TODO validate if user exists and is valid
 		//vars := mux.Vars(r)
@@ -26,19 +26,19 @@ func Authentication2FA(ctx context.Context, server *Server) http.Handler {
 		action := strings.TrimSpace(q.Get("action"))
 		switch action {
 		case "generate":
-			GenerateAuthentication2FA(w, ctx, server)
+			generateAuthentication2FA(w, ctx, server)
 		case "verify":
 			key := strings.TrimSpace(q.Get("key"))
-			VerifyAuthentication2FA(w, ctx, server, key)
+			verifyAuthentication2FA(w, ctx, server, key)
 		case "expire":
-			ExpireAuthentication2FA(w, ctx, server)
+			expireAuthentication2FA(w, ctx, server)
 		default:
 			http.NotFound(w, r)
 		}
 	})
 }
 
-func GenerateAuthentication2FA(w http.ResponseWriter, ctx context.Context, server *Server) {
+func generateAuthentication2FA(w http.ResponseWriter, ctx context.Context, server *Server) {
 	keyChan := make(chan string)
 	errorChan := make(chan error)
 
@@ -70,7 +70,7 @@ func GenerateAuthentication2FA(w http.ResponseWriter, ctx context.Context, serve
 	}
 }
 
-func VerifyAuthentication2FA(w http.ResponseWriter, ctx context.Context, server *Server, key2FA string) {
+func verifyAuthentication2FA(w http.ResponseWriter, ctx context.Context, server *Server, key2FA string) {
 	resultChan := make(chan bool)
 	errorChan := make(chan error)
 
@@ -96,13 +96,13 @@ func VerifyAuthentication2FA(w http.ResponseWriter, ctx context.Context, server 
 			return
 		}
 	case err := <-errorChan:
-		server.Logger.LogError("Unable to verify key", errors.New("Invalid Key"))
+		server.Logger.LogError("Unable to verify key", errors.New("invalid Key"))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
-func ExpireAuthentication2FA(w http.ResponseWriter, ctx context.Context, server *Server) {
+func expireAuthentication2FA(w http.ResponseWriter, ctx context.Context, server *Server) {
 	err := auth.Expire2FA(ctx, server.Logger)
 	if err != nil {
 		server.Logger.LogError("Failed to expire 2FA ->", err)
