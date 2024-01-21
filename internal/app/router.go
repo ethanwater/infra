@@ -89,9 +89,11 @@ func authentication2FA(ctx context.Context, server *Server) http.Handler {
 			*requestChannel <- 1
 			generateAuthentication2FA(w, ctx, server)
 		case "verify":
+			*requestChannel <- 1
 			key := strings.TrimSpace(q.Get("key"))
 			verifyAuthentication2FA(w, ctx, server, key)
 		case "expire":
+			*requestChannel <- 1
 			expireAuthentication2FA(w, ctx, server)
 		default:
 			http.NotFound(w, r)
