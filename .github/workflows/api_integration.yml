@@ -24,18 +24,6 @@ jobs:
         go build ./...
         #go test -v ./...
         
-    - name: Run EchoResponse Test
-      run: |
-        go run build/main.go &  
-        sleep 5  
-        response=$(curl -s "http://127.0.0.1:8080/bella/echo=cat")
-        if [[ "$response" == *"cat"* ]]; then
-          echo "Test passed: EchoResponseHandler returned the expected input."
-        else
-          echo "Test failed: EchoResponseHandler did not return the expected input."
-          exit 1
-        fi
-    
     - name: Run 2FA Test
       run: |
         go run build/main.go &

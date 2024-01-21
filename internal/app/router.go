@@ -5,46 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"errors"
 	"strings"
-	"sync"
 
-	"github.com/gorilla/mux"
 	"vivian.infra/internal/pkg/auth"
 )
-
-func EchoResponseHandler(ctx context.Context, server *Server) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//TODO validate if user exists and is valid
-		//vars := mux.Vars(r)
-		//user := vars["user"]
-		//if user does not exist{
-		//	logWarning*
-		//	return
-		//}
-
-		vars := mux.Vars(r)
-		echoResponse := vars["echo"]
-
-		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			server.Logger.LogSuccess(echoResponse)
-		}()
-		wg.Wait()
-
-		w.WriteHeader(http.StatusOK)
-		_, err := w.Write([]byte(echoResponse))
-		if err != nil {
-			server.Logger.LogError("Error writing response: ", err)
-		}
-	})
-}
 
 func Authentication2FA(ctx context.Context, server *Server) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		//TODO validate if user exists and is valid
 		//vars := mux.Vars(r)
+		//detect user session***
 		//user := vars["user"]
 		//if user does not exist{
 		//	logWarning*
@@ -84,16 +55,16 @@ func GenerateAuthentication2FA(w http.ResponseWriter, ctx context.Context, serve
 	case hash2FA := <-keyChan:
 		bytes, err := json.Marshal(hash2FA)
 		if err != nil {
-			server.Logger.LogError("failure marshalling results", err)
+			server.Logger.LogError("Failure marshalling results", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if _, err := fmt.Fprintln(w, string(bytes)); err != nil {
-			server.Logger.LogError("failure writing results", err)
+			server.Logger.LogError("Failure writing results", err)
 			return
 		}
 	case err := <-errorChan:
-		server.Logger.LogError("unable to generate authentication 2FA: %v", err)
+		server.Logger.LogError("Unable to generate authentication 2FA: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -116,16 +87,16 @@ func VerifyAuthentication2FA(w http.ResponseWriter, ctx context.Context, server 
 	case result := <-resultChan:
 		bytes, err := json.Marshal(result)
 		if err != nil {
-			server.Logger.LogError("failure marshalling results", err)
+			server.Logger.LogError("Failure marshalling results", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if _, err := fmt.Fprintln(w, string(bytes)); err != nil {
-			server.Logger.LogError("failure writing results", err)
+			server.Logger.LogError("Failure writing results", err)
 			return
 		}
 	case err := <-errorChan:
-		//server.Logger.LogWarning("invalid key")
+		server.Logger.LogError("Unable to verify key", errors.New("Invalid Key"))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -134,8 +105,8 @@ func VerifyAuthentication2FA(w http.ResponseWriter, ctx context.Context, server 
 func ExpireAuthentication2FA(w http.ResponseWriter, ctx context.Context, server *Server) {
 	err := auth.Expire2FA(ctx, server.Logger)
 	if err != nil {
-		server.Logger.LogError("failed to expire 2FA ->", err)
+		server.Logger.LogError("Failed to expire 2FA ->", err)
 		return
 	}
-	server.Logger.LogDebug("successfully expired 2FA token")
+	server.Logger.LogSuccess("Successfully expired 2FA token")
 }
