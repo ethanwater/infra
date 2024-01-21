@@ -15,18 +15,21 @@ import (
 )
 
 const (
-	CHARSET       string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	AUTH_KEY_SIZE int    = 5
+	CHARSET             string        = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	AUTH_KEY_SIZE       int           = 5
+	AUTH_KEY_EXPIRATION time.Duration = 5 * time.Minute
 )
 
 type Authenticator interface {
-	//Login
-	LoginUser(context.Context, string, string, *utils.VivianLogger) (bool, error)
-
-	//2FA
 	GenerateAuthKey2FA(context.Context, *utils.VivianLogger) (string, error)
 	VerifyAuthKey2FA(context.Context, string, *utils.VivianLogger) (bool, error)
 	ExpireAuthentication2FA(context.Context, *utils.VivianLogger) error
+}
+
+type TwoFactorAuthToken struct {
+	token       string
+	timeCreated time.Time
+	lifetime    time.Duration
 }
 
 type HashManager struct {
@@ -56,13 +59,19 @@ func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, err
 		}
 		return authKey.String()
 	}
+
 	authKey := authKeyGeneration()
+	authenticationKeyToken := TwoFactorAuthToken{
+		token:       authKey,
+		timeCreated: time.Now(),
+		lifetime:    AUTH_KEY_EXPIRATION,
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		authKeyHash, err := HashKeyphrase(ctx, authKey)
+		authKeyHash, err := HashKeyphrase(ctx, authenticationKeyToken.token)
 		if err != nil {
 			s.LogError("Failure during hashing process", err)
 			return
@@ -78,7 +87,7 @@ func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, err
 		return "", nil
 	}
 
-	s.LogSuccess(fmt.Sprintf("Authentication key generated: %v", authKey))
+	s.LogSuccess(fmt.Sprintf("Authentication key generated: %v:%v", authenticationKeyToken.token, authenticationKeyToken.lifetime))
 	return authKey, nil
 }
 
