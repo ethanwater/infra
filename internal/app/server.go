@@ -38,13 +38,17 @@ type Server struct {
 	mux                sync.Mutex
 }
 
+var VivianServerLogger *utils.VivianLogger
+
 func Deploy(ctx context.Context) error {
 	logger := log.New(os.Stdout, "", log.Lmsgprefix)
 	s := buildServer(ctx, logger)
+	VivianServerLogger = s.Logger
+
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
-	server := &http.Server{
+	httpServer := &http.Server{
 		Addr:         s.Addr,
 		Handler:      s.Handler,
 		ReadTimeout:  s.VivianReadTimeout,
@@ -55,7 +59,7 @@ func Deploy(ctx context.Context) error {
 
 	go func() {
 		<-ctx.Done()
-		server.Shutdown(context.Background())
+		httpServer.Shutdown(context.Background())
 	}()
 
 	return http.ListenAndServe(s.Addr, s.Handler)
@@ -73,7 +77,7 @@ func buildServer(ctx context.Context, logger *log.Logger) *Server {
 	deploymentID := generateDeploymentID()
 
 	router := mux.NewRouter()
-	server := &Server{
+	httpServer := &Server{
 		DeploymentID:       deploymentID,
 		Logger:             &utils.VivianLogger{Logger: logger, DeploymentID: deploymentID},
 		Handler:            router,
@@ -83,6 +87,6 @@ func buildServer(ctx context.Context, logger *log.Logger) *Server {
 	}
 
 	//2FA handlers are called onyl after the user is verified via Login
-	router.Handle("/{user}/2FA", authentication2FA(ctx, server)).Methods("GET")
-	return server
+	router.Handle("/{user}/2FA", authentication2FA(ctx, httpServer)).Methods("GET")
+	return httpServer
 }
