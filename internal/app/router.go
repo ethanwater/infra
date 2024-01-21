@@ -7,38 +7,67 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"sync/atomic"
+	"time"
 
 	"vivian.infra/internal/pkg/auth"
 )
 
 const (
-	BUCKET_LIMITER_SIZE uint16 = 10
-	BUCKET_LIMITER_LEAK_RATE uint16 = 1
+	BUCKET_LIMITER_SIZE      uint32        = 10
+	BUCKET_LIMITER_LEAK_AMT  uint32        = 1
+	BUCKET_LIMITER_LEAK_RATE time.Duration = 500 * time.Millisecond
 )
 
-var requestFlag atomic.Uint32
-var requestChannel chan uint16 = make(chan uint16, BUCKET_LIMITER_SIZE)
-var wg sync.WaitGroup
+var requestChannel *chan uint32
+var requestChannelCounter *uint32
 
-//TODO: fix this, use a ticker to take away leak_rate, <- chan
+type Limiter struct {
+	requestTicker         time.Ticker
+	requestChannel        chan uint32
+	requestChannelCounter uint32
+	requestBlockerState   atomic.Uint32
+}
+
 func init() {
-	wg.Add(1)
+	//TODO: dont intitiate counter if app is not in 2FA state
+	limiter := Limiter{
+		requestTicker:         *time.NewTicker(BUCKET_LIMITER_LEAK_RATE),
+		requestChannel:        make(chan uint32, BUCKET_LIMITER_SIZE),
+		requestChannelCounter: 0,
+		requestBlockerState:   atomic.Uint32{},
+	}
+	requestChannel = &limiter.requestChannel
+	requestChannelCounter = &limiter.requestChannelCounter
+	limiter.RateLimiter()
+}
+
+func (l *Limiter) RateLimiter() {
 	go func() {
-		defer wg.Done()
-		select {
-		case requestChannel <- 1:
-		default:
+		for {
+			select {
+			case <-l.requestTicker.C:
+				if l.requestChannelCounter >= 10 {
+					fmt.Println("fuck") //log blocking
+				}
+				fmt.Println("Channel Len:", len(l.requestChannel), "Channel Cap:", cap(l.requestChannel), "Pool:", l.requestChannelCounter)
+				if l.requestChannelCounter > 0 {
+					l.requestChannelCounter -= BUCKET_LIMITER_LEAK_AMT
+				} else {
+					l.requestChannelCounter = 0
+					l.requestChannel = make(chan uint32, BUCKET_LIMITER_SIZE)
+				}
+			}
 		}
 	}()
 }
 
 func authentication2FA(ctx context.Context, server *Server) http.Handler {
-	wg.Wait()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Channel Len:", len(requestChannel), "Channel Cap:", cap(requestChannel))
-		fmt.Println("Channel Len:", requestFlag.Load())
+		if *requestChannelCounter >= 10 {
+			return
+		}
+		*requestChannelCounter++
 		//TODO validate if user exists and is valid
 		//vars := mux.Vars(r)
 		//detect user session***
@@ -52,7 +81,7 @@ func authentication2FA(ctx context.Context, server *Server) http.Handler {
 		action := strings.TrimSpace(q.Get("action"))
 		switch action {
 		case "generate":
-			requestChannel <- 1
+			*requestChannel <- 1
 			generateAuthentication2FA(w, ctx, server)
 		case "verify":
 			key := strings.TrimSpace(q.Get("key"))
