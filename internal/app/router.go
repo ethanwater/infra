@@ -7,12 +7,38 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"vivian.infra/internal/pkg/auth"
 )
 
+const (
+	BUCKET_LIMITER_SIZE uint16 = 10
+	BUCKET_LIMITER_LEAK_RATE uint16 = 1
+)
+
+var requestFlag atomic.Uint32
+var requestChannel chan uint16 = make(chan uint16, BUCKET_LIMITER_SIZE)
+var wg sync.WaitGroup
+
+//TODO: fix this, use a ticker to take away leak_rate, <- chan
+func init() {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		select {
+		case requestChannel <- 1:
+		default:
+		}
+	}()
+}
+
 func authentication2FA(ctx context.Context, server *Server) http.Handler {
+	wg.Wait()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Channel Len:", len(requestChannel), "Channel Cap:", cap(requestChannel))
+		fmt.Println("Channel Len:", requestFlag.Load())
 		//TODO validate if user exists and is valid
 		//vars := mux.Vars(r)
 		//detect user session***
@@ -26,6 +52,7 @@ func authentication2FA(ctx context.Context, server *Server) http.Handler {
 		action := strings.TrimSpace(q.Get("action"))
 		switch action {
 		case "generate":
+			requestChannel <- 1
 			generateAuthentication2FA(w, ctx, server)
 		case "verify":
 			key := strings.TrimSpace(q.Get("key"))
