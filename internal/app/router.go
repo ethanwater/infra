@@ -20,6 +20,7 @@ const (
 )
 
 var requestChannel *chan uint32
+var killRequestTickerChannel = make(chan uint16)
 var requestChannelCounter *uint32
 
 type Limiter struct {
@@ -42,13 +43,14 @@ func init() {
 	limiter.RateLimiter()
 }
 
+// TODO: should have its own file
 func (l *Limiter) RateLimiter() {
 	go func() {
 		for {
 			select {
 			case <-l.requestTicker.C:
 				if l.requestChannelCounter >= 10 {
-					fmt.Println("fuck") //log blocking
+					VivianServerLogger.LogWarning(fmt.Sprintf("Blocking channel {status code:%v}", http.StatusTooManyRequests))
 				}
 				fmt.Println("Channel Len:", len(l.requestChannel), "Channel Cap:", cap(l.requestChannel), "Pool:", l.requestChannelCounter)
 				if l.requestChannelCounter > 0 {
@@ -57,6 +59,9 @@ func (l *Limiter) RateLimiter() {
 					l.requestChannelCounter = 0
 					l.requestChannel = make(chan uint32, BUCKET_LIMITER_SIZE)
 				}
+			case <-killRequestTickerChannel:
+				VivianServerLogger.LogDebug("killing request ticker channel")
+				return
 			}
 		}
 	}()
@@ -137,6 +142,7 @@ func verifyAuthentication2FA(w http.ResponseWriter, ctx context.Context, server 
 			return
 		}
 		resultChan <- result
+		killRequestTickerChannel <- 1
 	}()
 
 	select {
