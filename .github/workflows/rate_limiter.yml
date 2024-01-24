@@ -19,11 +19,11 @@ jobs:
       with:
         go-version: 1.21
 
-    - name: Build and Test
+    - name: Build
       run: |
         go build ./...
         
-    - name: Run 2FA Test
+    - name: Run Rate Limiter Test
       run: |
         go run build/main.go &
         sleep 5
