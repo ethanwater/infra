@@ -20,8 +20,8 @@ const (
 )
 
 var requestChannel *chan uint32
-var killRequestTickerChannel = make(chan uint16)
 var requestChannelCounter *uint32
+var killRequestTickerChannel = make(chan uint16)
 
 type Limiter struct {
 	requestTicker         time.Ticker
@@ -69,18 +69,7 @@ func (l *Limiter) RateLimiter() {
 
 func authentication2FA(ctx context.Context, server *Server) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if *requestChannelCounter >= 10 {
-			return
-		}
 		*requestChannelCounter++
-		//TODO validate if user exists and is valid
-		//vars := mux.Vars(r)
-		//detect user session***
-		//user := vars["user"]
-		//if user does not exist{
-		//	logWarning*
-		//	return
-		//}
 
 		q := r.URL.Query()
 		action := strings.TrimSpace(q.Get("action"))
@@ -128,7 +117,7 @@ func generateAuthentication2FA(w http.ResponseWriter, ctx context.Context, serve
 		}
 	case err := <-errorChan:
 		server.Logger.LogError("Unable to generate authentication 2FA: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		//http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }

@@ -89,13 +89,13 @@ func VerifyAuthKey2FA(ctx context.Context, key string, s *utils.VivianLogger) (b
 
 	if hashManagerAtomic.flag == 1 {
 		s.LogWarning("2FA has not been initialized")
-		return false, nil
+		return false, errors.New("2FA has not been initialized")
 	}
 
 	hash := hashManagerAtomic.atomicValue.Load()
 	if hash == nil {
 		s.LogWarning("HashManager failure")
-		return false, nil
+		return false, errors.New("HashManager failure")
 	}
 
 	key = sanitize(key)
