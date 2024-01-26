@@ -38,10 +38,10 @@ func HandleWebSocketTimestamp(ctx context.Context) http.Handler {
 			for {
 				select {
 				case <-reconnectChannel:
-					//app.Logger(ctx).Error("vivian: socket: [error]", "err", err)
+					VivianServerLogger.LogDebug("handshake disconnected")
 					return
 				case <-ctx.Done():
-					//app.Logger(ctx).Error("vivian: socket: [error]", "err", "context lost")
+					VivianServerLogger.LogWarning("lost context")
 					return
 				}
 			}
@@ -102,12 +102,10 @@ func SocketCalls(ctx context.Context) http.Handler {
 			for {
 				select {
 				case <-reconnectChannel:
-					//if err := app.socket.Get().LoggerSocket(ctx, "vivian: [ok] socket: reconnected"); err != nil {
-					//	app.Logger(ctx).Error("vivian: socket: [error]", "err", err)
-					//}
+					VivianServerLogger.LogDebug("reconnected")
 					return
 				case <-ctx.Done():
-					//app.Logger(ctx).Error("vivian: socket: [error]", "err", "context lost")
+					VivianServerLogger.LogWarning("lost context")
 					return
 				}
 			}
