@@ -51,7 +51,7 @@ func Deploy(ctx context.Context) error {
 
 	configSQL := database.ConfigSQL{
 		Driver: "mysql",
-		Source: "root:@tcp(127.0.0.1:3306)/user_schema",
+		Source: "root:@tcp(127.0.0.1:3306)",
 	}
 	err := configSQL.InitDatabase(ctx, VivianServerLogger)
 	if err != nil {

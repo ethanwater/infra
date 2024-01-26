@@ -30,7 +30,7 @@ jobs:
 
     - name: Create Database
       run: |
-        mysql -h 127.0.0.1 -P 3306 -u root -e "CREATE DATABASE IF NOT EXISTS user_schema; USE user_schema;
+        mysql -h 127.0.0.1 -P 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS user_schema; USE user_schema;
           DROP TABLE IF EXISTS users;
           CREATE TABLE users (
             id        INT UNIQUE NOT NULL,
