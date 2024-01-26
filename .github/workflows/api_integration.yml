@@ -23,22 +23,11 @@ jobs:
     - name: Launch MySql
       run: |
         sudo /etc/init.d/mysql start
-        sleep 10
+        sleep 5
     
-    - name: Get Temporary Password
-        id: get_temp_password
-        run: |
-          temp_password=$(mysql -uroot -e "SHOW VARIABLES LIKE 'validate_password%'")
-          echo "TEMP_PASSWORD=$(echo "$temp_password" | grep -oP 'validate_password.*\K[^\s]+')" >> $GITHUB_ENV
- 
-    - name: Print Temporary Password
-        run: |
-          echo "Temporary Password: $TEMP_PASSWORD"
-
-
     - name: Create Database
       run: |
-        mysql -h 127.0.0.1 -P 3306 -u root -proot -e "CREATE DATABASE IF NOT EXISTS user_schema; USE user_schema;
+        mysql -h 127.0.0.1 -P 3306 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS user_schema; USE user_schema;
           DROP TABLE IF EXISTS users;
           CREATE TABLE users (
             id        INT UNIQUE NOT NULL,
