@@ -99,8 +99,8 @@ func buildServer(ctx context.Context, logger *log.Logger) *Server {
 		VivianWriteTimeout: VIVIAN_READWRITE_TIMEOUT,
 	}
 
-	//2FA handlers are called onyl after the user is verified via Login
-	router.Handle("/{alias}/2FA", authentication2FA(ctx, vivianServer)).Methods("GET")
+	//2FA handlers are called only after the user is verified via Login
+	router.Handle("/{alias}/2FA", Authentication2FA(ctx)).Methods("GET")
 	router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
 	return vivianServer
 }

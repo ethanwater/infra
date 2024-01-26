@@ -26,13 +26,12 @@ type ConfigSQL struct {
 	Source   string
 }
 
-
 func (config *ConfigSQL) InitDatabase(ctx context.Context, s *utils.VivianLogger) error {
 	db, err := sql.Open(config.Driver, config.Source)
 	if err != nil {
 		return err
 	}
-	config.Database = db 
+	config.Database = db
 
 	return config.Database.Ping()
 }
