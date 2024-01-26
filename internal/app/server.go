@@ -101,5 +101,6 @@ func buildServer(ctx context.Context, logger *log.Logger) *Server {
 
 	router.Handle("/{alias}/2FA", authentication2FA(ctx)).Methods("GET")
 	router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
+	router.Handle("/ws", HandleWebSocketTimestamp(ctx))
 	return vivianServer
 }
