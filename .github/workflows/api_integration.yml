@@ -23,6 +23,7 @@ jobs:
     - name: Launch MySql
       run: |
         sudo /etc/init.d/mysql start
+        sleep 10
     
     - name: Get Temporary Password
       id: get_temp_password
