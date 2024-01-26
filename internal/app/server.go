@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"vivian.infra/internal/database"
 	"vivian.infra/internal/utils"
 )
 
@@ -38,24 +40,34 @@ type Server struct {
 	mux                sync.Mutex
 }
 
-var VivianServerLogger *utils.VivianLogger
+var (
+	VivianServerLogger *utils.VivianLogger
+	VivianDatabase     *sql.DB
+)
 
 func Deploy(ctx context.Context) error {
-	logger := log.New(os.Stdout, "", log.Lmsgprefix)
-	s := buildServer(ctx, logger)
+	s := buildServer(ctx, log.New(os.Stdout, "", log.Lmsgprefix))
 	VivianServerLogger = s.Logger
+
+	configSQL := database.ConfigSQL{
+		Driver: "mysql",
+		Source: "root:@tcp(127.0.0.1:3306)/",
+	}
+	err := configSQL.InitDatabase(ctx, VivianServerLogger)
+	if err != nil {
+		VivianServerLogger.LogFatal("unable to connect to SQL database")
+	}
+	VivianDatabase = configSQL.Database
 
 	s.mux.Lock()
 	defer s.mux.Unlock()
-
 	httpServer := &http.Server{
 		Addr:         s.Addr,
 		Handler:      s.Handler,
 		ReadTimeout:  s.VivianReadTimeout,
 		WriteTimeout: s.VivianWriteTimeout,
 	}
-
-	s.Logger.LogDeployment()
+	s.Logger.LogDeployment(VivianDatabase.Ping() == nil)
 
 	go func() {
 		<-ctx.Done()
@@ -77,7 +89,7 @@ func buildServer(ctx context.Context, logger *log.Logger) *Server {
 	deploymentID := generateDeploymentID()
 
 	router := mux.NewRouter()
-	httpServer := &Server{
+	vivianServer := &Server{
 		DeploymentID:       deploymentID,
 		Logger:             &utils.VivianLogger{Logger: logger, DeploymentID: deploymentID},
 		Handler:            router,
@@ -87,6 +99,7 @@ func buildServer(ctx context.Context, logger *log.Logger) *Server {
 	}
 
 	//2FA handlers are called onyl after the user is verified via Login
-	router.Handle("/{user}/2FA", authentication2FA(ctx, httpServer)).Methods("GET")
-	return httpServer
+	router.Handle("/{user}/2FA", authentication2FA(ctx, vivianServer)).Methods("GET")
+	router.Handle("/{user}/fetch", fetchUserAccount(ctx)).Methods("GET")
+	return vivianServer
 }
