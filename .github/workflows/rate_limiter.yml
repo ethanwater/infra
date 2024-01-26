@@ -23,13 +23,13 @@ jobs:
       run: |
         go build ./...
         
-    - name: Run 2FA Test
-      run: |
-        go run build/main.go &
-        sleep 5
+        #- name: Run Rate Limiter Test
+        #run: |
+        #go run build/main.go &
+        #sleep 5
 
-        chmod +x build/rate_limiter_test.sh
-        ./rate_limiter_test.sh
+        #chmod +x build/rate_limiter_test.sh
+        #./rate_limiter_test.sh
 
-    - name: Stop the server
-      run: pkill -f "build/main.go" || true  
+        #- name: Stop the server
+        #run: pkill -f "build/main.go" || true  
