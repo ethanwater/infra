@@ -55,7 +55,7 @@ func Deploy(ctx context.Context) error {
 	}
 	err := configSQL.InitDatabase(ctx, VivianServerLogger)
 	if err != nil {
-		VivianServerLogger.LogFatal("unable to connect to SQL database")
+		VivianServerLogger.LogError("unable to connect to SQL database", err)
 	}
 	VivianDatabase = configSQL.Database
 
