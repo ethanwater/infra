@@ -27,8 +27,7 @@ jobs:
     - name: mysql.start
       run: |
         sudo /etc/init.d/mysql start
-        mysql -e "CREATE DATABASE IF NOT EXISTS user_schema; source internal/database/user_scheme.sql;"
-
+        mysql -u root -p root -e "CREATE DATABASE IF NOT EXISTS user_schema; source internal/database/user_scheme.sql;" 
         
     - name: Run 2FA Test
       run: |
