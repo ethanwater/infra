@@ -23,6 +23,16 @@ jobs:
     - name: Launch MySql
       run: |
         sudo /etc/init.d/mysql start
+    
+    - name: Get Temporary Password
+      id: get_temp_password
+      run: |
+        temp_password=$(grep 'A temporary password is generated' /var/log/mysql/error.log | awk '{print $NF}')
+        echo "::set-output name=temp_password::$temp_password"
+
+    - name: Print Temporary Password
+      run: |
+        echo "Temporary Password: ${{ steps.get_temp_password.outputs.temp_password }}"
 
     - name: Create Database
       run: |
