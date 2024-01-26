@@ -45,11 +45,9 @@ jobs:
       run: |
         go build ./...
 
-    - name: Open connection to MySQL port
-      run: mysql -h 127.0.0.1 -P 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "SELECT 1"
-
     - name: Run 2FA Test
       run: |
+        mysql -h 127.0.0.1 -P 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "SELECT 1"
         go run build/main.go &
         sleep 5
         generate_response=$(curl -s "http://127.0.0.1:8080/bella/2FA?action=generate" | tr -d '"')
