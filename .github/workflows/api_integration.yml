@@ -19,16 +19,31 @@ jobs:
       with:
         go-version: 1.21
 
+
+    - name: Launch MySql
+      run: |
+        sudo /etc/init.d/mysql start
+
+    - name: Create Database
+      run: |
+        mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS user_schema; USE user_schema;
+          DROP TABLE IF EXISTS users;
+          CREATE TABLE users (
+            id        INT UNIQUE NOT NULL,
+            alias     VARCHAR(128) UNIQUE,
+            email     VARCHAR(128) UNIQUE,
+            password  VARCHAR(128) NOT NULL,
+            PRIMARY KEY (id)
+          );
+          INSERT INTO users (id, alias, email, password)
+          VALUES (1, 'vivian-admin', 'vivian@vivian.com', '$2a$13$oCCafEIoJJZx/R31iGtOmuGULSIKKnHtytkpAlEYVMWBAuhkWx0Hu');
+        " 
+    
     - name: Build and Test
       run: |
         go build ./...
         #go test -v ./...
 
-    - name: mysql.start
-      run: |
-        sudo /etc/init.d/mysql start
-        mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS user_schema; source internal/database/user_scheme.sql;" 
-        
     - name: Run 2FA Test
       run: |
         go run build/main.go &
