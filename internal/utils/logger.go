@@ -45,9 +45,10 @@ func (s *VivianLogger) logMessage(logLevel, msg string) {
 	s.Logger.Print(logMessage)
 }
 
-func (s *VivianLogger) LogDeployment() {
+func (s *VivianLogger) LogDeployment(statusDB bool) {
 	fmt.Printf("╭───────────────────────────────────────────────────╮\n")
 	fmt.Printf("│ app        : %-45s │\n", color.Ize(color.Cyan, VIVIAN_APP_NAME))
+	fmt.Printf("│ database   : %-45s │\n", color.Ize(color.Green, statusDB))
 	fmt.Printf("│ deployment : %-36s │\n", color.Ize(color.Purple, s.DeploymentID))
 	fmt.Printf("╰───────────────────────────────────────────────────╯\n")
 }

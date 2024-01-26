@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/gorilla/mux"
+	"vivian.infra/internal/database"
 	"vivian.infra/internal/pkg/auth"
 )
 
@@ -43,7 +45,6 @@ func init() {
 	limiter.RateLimiter()
 }
 
-// TODO: should have its own file
 func (l *Limiter) RateLimiter() {
 	go func() {
 		for {
@@ -52,7 +53,7 @@ func (l *Limiter) RateLimiter() {
 				if l.requestChannelCounter >= 10 {
 					VivianServerLogger.LogWarning(fmt.Sprintf("Blocking channel {status code:%v}", http.StatusTooManyRequests))
 				}
-				fmt.Println("Channel Len:", len(l.requestChannel), "Channel Cap:", cap(l.requestChannel), "Pool:", l.requestChannelCounter)
+				//fmt.Println("Channel Len:", len(l.requestChannel), "Channel Cap:", cap(l.requestChannel), "Pool:", l.requestChannelCounter)
 				if l.requestChannelCounter > 0 {
 					l.requestChannelCounter -= BUCKET_LIMITER_LEAK_AMT
 				} else {
@@ -67,6 +68,23 @@ func (l *Limiter) RateLimiter() {
 	}()
 }
 
+// Accounts
+func fetchUserAccount(ctx context.Context) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		alias := vars["alias"]
+
+		account, err := database.FetchAccount(VivianDatabase, alias)
+		if err != nil {
+			VivianServerLogger.LogWarning(fmt.Sprintf("unable to fetch account %v", err))
+			return
+		}
+
+		VivianServerLogger.LogSuccess(fmt.Sprintf("fetched account: %v", account))
+	})
+}
+
+// Authentication 2FA
 func authentication2FA(ctx context.Context, server *Server) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		*requestChannelCounter++
@@ -76,26 +94,26 @@ func authentication2FA(ctx context.Context, server *Server) http.Handler {
 		switch action {
 		case "generate":
 			*requestChannel <- 1
-			generateAuthentication2FA(w, ctx, server)
+			generateAuthentication2FA(w, ctx)
 		case "verify":
 			*requestChannel <- 1
 			key := strings.TrimSpace(q.Get("key"))
-			verifyAuthentication2FA(w, ctx, server, key)
+			verifyAuthentication2FA(w, ctx, key)
 		case "expire":
 			*requestChannel <- 1
-			expireAuthentication2FA(w, ctx, server)
+			expireAuthentication2FA(w, ctx)
 		default:
 			http.NotFound(w, r)
 		}
 	})
 }
 
-func generateAuthentication2FA(w http.ResponseWriter, ctx context.Context, server *Server) {
+func generateAuthentication2FA(w http.ResponseWriter, ctx context.Context) {
 	keyChan := make(chan string)
 	errorChan := make(chan error)
 
 	go func() {
-		key2FA, err := auth.GenerateAuthKey2FA(ctx, server.Logger)
+		key2FA, err := auth.GenerateAuthKey2FA(ctx, VivianServerLogger)
 		if err != nil {
 			errorChan <- err
 			return
@@ -107,27 +125,27 @@ func generateAuthentication2FA(w http.ResponseWriter, ctx context.Context, serve
 	case hash2FA := <-keyChan:
 		bytes, err := json.Marshal(hash2FA)
 		if err != nil {
-			server.Logger.LogError("Failure marshalling results", err)
+			VivianServerLogger.LogError("Failure marshalling results", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if _, err := fmt.Fprintln(w, string(bytes)); err != nil {
-			server.Logger.LogError("Failure writing results", err)
+			VivianServerLogger.LogError("Failure writing results", err)
 			return
 		}
 	case err := <-errorChan:
-		server.Logger.LogError("Unable to generate authentication 2FA: %v", err)
+		VivianServerLogger.LogError("Unable to generate authentication 2FA: %v", err)
 		//http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
-func verifyAuthentication2FA(w http.ResponseWriter, ctx context.Context, server *Server, key2FA string) {
+func verifyAuthentication2FA(w http.ResponseWriter, ctx context.Context, key2FA string) {
 	resultChan := make(chan bool)
 	errorChan := make(chan error)
 
 	go func() {
-		result, err := auth.VerifyAuthKey2FA(ctx, key2FA, server.Logger)
+		result, err := auth.VerifyAuthKey2FA(ctx, key2FA, VivianServerLogger)
 		if err != nil {
 			errorChan <- err
 			return
@@ -140,26 +158,26 @@ func verifyAuthentication2FA(w http.ResponseWriter, ctx context.Context, server 
 	case result := <-resultChan:
 		bytes, err := json.Marshal(result)
 		if err != nil {
-			server.Logger.LogError("Failure marshalling results", err)
+			VivianServerLogger.LogError("Failure marshalling results", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if _, err := fmt.Fprintln(w, string(bytes)); err != nil {
-			server.Logger.LogError("Failure writing results", err)
+			VivianServerLogger.LogError("Failure writing results", err)
 			return
 		}
 	case err := <-errorChan:
-		server.Logger.LogError("Unable to verify key", errors.New("invalid Key"))
+		VivianServerLogger.LogError("Unable to verify key", errors.New("invalid Key"))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
-func expireAuthentication2FA(w http.ResponseWriter, ctx context.Context, server *Server) {
-	err := auth.Expire2FA(ctx, server.Logger)
+func expireAuthentication2FA(w http.ResponseWriter, ctx context.Context) {
+	err := auth.Expire2FA(ctx, VivianServerLogger)
 	if err != nil {
-		server.Logger.LogError("Failed to expire 2FA ->", err)
+		VivianServerLogger.LogError("Failed to expire 2FA ->", err)
 		return
 	}
-	server.Logger.LogSuccess("Successfully expired 2FA token")
+	VivianServerLogger.LogSuccess("Successfully expired 2FA token")
 }
