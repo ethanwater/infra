@@ -26,14 +26,15 @@ jobs:
         sleep 10
     
     - name: Get Temporary Password
-      id: get_temp_password
-      run: |
-        temp_password=$(grep 'A temporary password is generated' /var/log/mysql/error.log | awk '{print $NF}')
-        echo "::set-output name=temp_password::$temp_password"
-
+        id: get_temp_password
+        run: |
+          temp_password=$(mysql -uroot -e "SHOW VARIABLES LIKE 'validate_password%'")
+          echo "TEMP_PASSWORD=$(echo "$temp_password" | grep -oP 'validate_password.*\K[^\s]+')" >> $GITHUB_ENV
+ 
     - name: Print Temporary Password
-      run: |
-        echo "Temporary Password: ${{ steps.get_temp_password.outputs.temp_password }}"
+        run: |
+          echo "Temporary Password: $TEMP_PASSWORD"
+
 
     - name: Create Database
       run: |
