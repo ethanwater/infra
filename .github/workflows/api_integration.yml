@@ -19,16 +19,18 @@ jobs:
       with:
         go-version: 1.21
 
-    - name: Launch MySql
-      run: |
-        sudo /etc/init.d/mysql start
-        sleep 5
-    - name: Check MySQL Service Status
-      run: sudo /etc/init.d/mysql status
+    - name: Set up MySQL
+      uses: mysqljs/setup-mysql@v2
+      with:
+        mysql-version: '5.7'
+      env:
+        MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
-    - name: Create Database
+    - name: Execute SQL Commands
       run: |
-        mysql -h 127.0.0.1 -P 3306 -u root -e "CREATE DATABASE IF NOT EXISTS user_schema; USE user_schema;
+        mysql -h 127.0.0.1 -P 3306 -u root -p"${MYSQL_ROOT_PASSWORD}" -e "
+          CREATE DATABASE IF NOT EXISTS user_schema;
+          USE user_schema;
           DROP TABLE IF EXISTS users;
           CREATE TABLE users (
             id        INT UNIQUE NOT NULL,
@@ -40,6 +42,8 @@ jobs:
           INSERT INTO users (id, alias, email, password)
           VALUES (1, 'vivian-admin', 'vivian@vivian.com', '$2a$13$oCCafEIoJJZx/R31iGtOmuGULSIKKnHtytkpAlEYVMWBAuhkWx0Hu');
         "
+      env:
+        MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
     - name: Build and Test
       run: |
