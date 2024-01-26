@@ -99,7 +99,7 @@ func buildServer(ctx context.Context, logger *log.Logger) *Server {
 	}
 
 	//2FA handlers are called onyl after the user is verified via Login
-	router.Handle("/{user}/2FA", authentication2FA(ctx, vivianServer)).Methods("GET")
-	router.Handle("/{user}/fetch", fetchUserAccount(ctx)).Methods("GET")
+	router.Handle("/{alias}/2FA", authentication2FA(ctx, vivianServer)).Methods("GET")
+	router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
 	return vivianServer
 }

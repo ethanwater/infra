@@ -72,9 +72,9 @@ func (l *Limiter) RateLimiter() {
 func fetchUserAccount(ctx context.Context) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
-		email := vars["user"]
+		alias := vars["alias"]
 
-		account, err := database.FetchAccount(VivianDatabase, email)
+		account, err := database.FetchAccount(VivianDatabase, alias)
 		if err != nil {
 			VivianServerLogger.LogWarning(fmt.Sprintf("unable to fetch account %v", err))
 			return

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"sync"
 
 	_ "github.com/go-sql-driver/mysql"
 	"vivian.infra/internal/utils"
@@ -17,10 +16,8 @@ const (
 )
 
 type T interface {
-	Init(context.Context) error
-	PingDBConnection(context.Context) error
+	InitDatabase(context.Context) error
 	FetchAccount(context.Context, string) (Account, error)
-	AddAccount(context.Context, Account) error
 }
 
 type ConfigSQL struct {
@@ -29,41 +26,39 @@ type ConfigSQL struct {
 	Source   string
 }
 
-func (config *ConfigSQL) InitDatabase(ctx context.Context, s *utils.VivianLogger) error {
-	Database, _ := sql.Open(config.Driver, config.Source)
-	config.Database = Database
-	config.Database.SetMaxIdleConns(MaxIdleConns)
-	config.Database.SetMaxOpenConns(MaxOpenConns)
 
-	ping := config.Database.Ping()
-	return ping
+func (config *ConfigSQL) InitDatabase(ctx context.Context, s *utils.VivianLogger) error {
+	db, err := sql.Open(config.Driver, config.Source)
+	if err != nil {
+		return err
+	}
+	config.Database = db 
+
+	return config.Database.Ping()
 }
 
 type Account struct {
 	ID       int
+	Alias    string
 	Email    string
 	Password string
 }
 
-func FetchAccount(database *sql.DB, email string) (Account, error) {
-	var mux sync.Mutex
+func FetchAccount(db *sql.DB, alias string) (Account, error) {
 	var account Account
 
-	mux.Lock()
-	defer mux.Unlock()
-
-	_, err := database.Exec("USE user_schema")
+	_, err := db.Exec("USE user_schema")
 	if err != nil {
 		log.Fatal("Error selecting Database:", err)
 	}
 
-	stmt, err := database.Prepare("SELECT * FROM users WHERE email = ?")
+	stmt, err := db.Prepare("SELECT * FROM users WHERE alias = ?")
 	if err != nil {
 		return Account{}, fmt.Errorf("failed to prepare statement: %w", err)
 	}
 	defer stmt.Close()
 
-	err = stmt.QueryRow(email).Scan(&account.ID, &account.Email, &account.Password)
+	err = stmt.QueryRow(alias).Scan(&account.ID, &account.Alias, &account.Email, &account.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return Account{}, fmt.Errorf("no account found for email: %w", err)
