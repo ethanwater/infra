@@ -43,7 +43,7 @@ func (l *Limiter) RateLimiter() {
 			select {
 			case <-l.requestTicker.C:
 				if l.requestChannelCounter >= 10 {
-					VivianServerLogger.LogWarning(fmt.Sprintf("Blocking channel {status code:%v}", http.StatusTooManyRequests))
+					VivianServerLogger.LogWarning(fmt.Sprintf("blocked channel {status code:%v}", http.StatusTooManyRequests))
 				}
 				//fmt.Println("Channel Len:", len(l.requestChannel), "Channel Cap:", cap(l.requestChannel), "Pool:", l.requestChannelCounter)
 				if l.requestChannelCounter > 0 {

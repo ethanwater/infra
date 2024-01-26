@@ -64,7 +64,7 @@ func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, err
 		defer wg.Done()
 		authKeyHash, err := HashKeyphrase(ctx, authKey)
 		if err != nil {
-			s.LogError("Failure during hashing process", err)
+			s.LogError("failure during hashing process", err)
 			return
 		}
 		hashManagerAtomic.atomicValue.Store([]byte(authKeyHash))
@@ -74,11 +74,11 @@ func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, err
 	hash := hashManagerAtomic.atomicValue.Load().([]byte)
 
 	if hash == nil {
-		s.LogError("Failure fetching the authentication key", errors.New("no hash available"))
+		s.LogError("failure fetching the authentication key", errors.New("no hash available"))
 		return "", nil
 	}
 
-	s.LogSuccess(fmt.Sprintf("Authentication key generated: %v", authKey))
+	s.LogSuccess(fmt.Sprintf("authentication key generated: %v", authKey))
 	return authKey, nil
 }
 
@@ -94,7 +94,7 @@ func VerifyAuthKey2FA(ctx context.Context, key string, s *utils.VivianLogger) (b
 
 	hash := hashManagerAtomic.atomicValue.Load()
 	if hash == nil {
-		s.LogWarning("HashManager failure")
+		s.LogWarning("failure fetching data from hashmanager")
 		return false, errors.New("HashManager failure")
 	}
 
@@ -102,26 +102,26 @@ func VerifyAuthKey2FA(ctx context.Context, key string, s *utils.VivianLogger) (b
 	if sanitizeCheck(key) {
 		err := bcrypt.CompareHashAndPassword(hash.([]byte), []byte(key))
 		if err != nil {
-			s.LogWarning("Invalid key")
+			s.LogWarning("invalid key")
 			return false, err
 		} else {
-			s.LogSuccess("Verified key")
+			s.LogSuccess("verified key")
 			Expire2FA(ctx, s)
 			return true, nil
 		}
 	}
 
-	return false, errors.New("unable to Sanitize") //how the fuck would you get this anyways
+	return false, errors.New("failed to sanitize")
 }
 
 func Expire2FA(ctx context.Context, s *utils.VivianLogger) error {
 	if hashManagerAtomic.atomicValue.Load() == nil {
-		err := errors.New("HashManager is already nil")
+		err := errors.New("invalid hashmanager load")
 		return err
 	}
 	hashManagerAtomic.atomicValue = atomic.Value{}
 	hashManagerAtomic.flag = 1
 
-	s.LogDebug(fmt.Sprintf("Killing 2FA Key {expired at: %v}", time.Now().UTC()))
+	s.LogDebug(fmt.Sprintf("killed 2FA key at: %v}", time.Now().UTC()))
 	return nil
 }

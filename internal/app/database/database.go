@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 
 	_ "github.com/go-sql-driver/mysql"
 	"vivian.infra/internal/utils"
@@ -26,13 +25,14 @@ type ConfigSQL struct {
 	Source   string
 }
 
+var VivianServerLogger *utils.VivianLogger
 
 func (config *ConfigSQL) InitDatabase(ctx context.Context, s *utils.VivianLogger) error {
 	db, err := sql.Open(config.Driver, config.Source)
 	if err != nil {
 		return err
 	}
-	config.Database = db 
+	config.Database, VivianServerLogger = db, s
 
 	return config.Database.Ping()
 }
@@ -49,7 +49,7 @@ func FetchAccount(db *sql.DB, alias string) (Account, error) {
 
 	_, err := db.Exec("USE user_schema")
 	if err != nil {
-		log.Fatal("Error selecting Database:", err)
+		VivianServerLogger.LogFatal("error searching database")
 	}
 
 	stmt, err := db.Prepare("SELECT * FROM users WHERE alias = ?")

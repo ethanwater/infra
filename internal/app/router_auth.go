@@ -49,19 +49,18 @@ func generateAuthentication2FA(w http.ResponseWriter, ctx context.Context) {
 
 	select {
 	case hash2FA := <-keyChan:
-		bytes, err := json.Marshal(hash2FA)
+		_, err := json.Marshal(hash2FA)
 		if err != nil {
-			VivianServerLogger.LogError("Failure marshalling results", err)
+			VivianServerLogger.LogError("failure marshalling results", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if _, err := fmt.Fprintln(w, string(bytes)); err != nil {
-			VivianServerLogger.LogError("Failure writing results", err)
-			return
-		}
+		//if _, err := fmt.Fprintln(w, "2FA generation successful"); err != nil {
+		//	VivianServerLogger.LogError("Failure writing results", err)
+		//	return
+		//}
 	case err := <-errorChan:
-		VivianServerLogger.LogError("Unable to generate authentication 2FA: %v", err)
-		//http.Error(w, err.Error(), http.StatusInternalServerError)
+		VivianServerLogger.LogError("unable to generate authentication 2FA: %v", err)
 		return
 	}
 }
@@ -84,16 +83,16 @@ func verifyAuthentication2FA(w http.ResponseWriter, ctx context.Context, key2FA 
 	case result := <-resultChan:
 		bytes, err := json.Marshal(result)
 		if err != nil {
-			VivianServerLogger.LogError("Failure marshalling results", err)
+			VivianServerLogger.LogError("failure marshalling results", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if _, err := fmt.Fprintln(w, string(bytes)); err != nil {
-			VivianServerLogger.LogError("Failure writing results", err)
+			VivianServerLogger.LogError("failure writing results", err)
 			return
 		}
 	case err := <-errorChan:
-		VivianServerLogger.LogError("Unable to verify key", errors.New("invalid Key"))
+		VivianServerLogger.LogError("unable to verify key", errors.New("invalid Key"))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -102,8 +101,8 @@ func verifyAuthentication2FA(w http.ResponseWriter, ctx context.Context, key2FA 
 func expireAuthentication2FA(w http.ResponseWriter, ctx context.Context) {
 	err := auth.Expire2FA(ctx, VivianServerLogger)
 	if err != nil {
-		VivianServerLogger.LogError("Failed to expire 2FA ->", err)
+		VivianServerLogger.LogError("failed to expire 2FA ->", err)
 		return
 	}
-	VivianServerLogger.LogSuccess("Successfully expired 2FA token")
+	VivianServerLogger.LogSuccess("successfully expired 2FA token")
 }

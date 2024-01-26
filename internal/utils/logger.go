@@ -28,7 +28,7 @@ type VivianLogger struct {
 func (s *VivianLogger) logMessage(logLevel, msg string) {
 	_, file, line, ok := runtime.Caller(2)
 	if !ok {
-		fmt.Println("Failed to get file information")
+		fmt.Println("failed to get file information")
 		return
 	}
 
@@ -48,7 +48,7 @@ func (s *VivianLogger) logMessage(logLevel, msg string) {
 func (s *VivianLogger) LogDeployment(statusDB bool) {
 	fmt.Printf("╭───────────────────────────────────────────────────╮\n")
 	fmt.Printf("│ app        : %-45s │\n", color.Ize(color.Cyan, VIVIAN_APP_NAME))
-	fmt.Printf("│ database   : %-45s │\n", color.Ize(color.Green, statusDB))
+	fmt.Printf("│ database   : %-45s │\n", color.Ize(color.Green, fmt.Sprintf("status:%v", statusDB)))
 	fmt.Printf("│ deployment : %-36s │\n", color.Ize(color.Purple, s.DeploymentID))
 	fmt.Printf("╰───────────────────────────────────────────────────╯\n")
 }
