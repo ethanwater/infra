@@ -28,7 +28,7 @@ jobs:
 
     - name: Create Database
       run: |
-        mysql -h 127.0.0.1 -P 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS user_schema; USE user_schema;
+        mysql -h 127.0.0.1 -P 3306 -u root -e "CREATE DATABASE IF NOT EXISTS user_schema; USE user_schema;
           DROP TABLE IF EXISTS users;
           CREATE TABLE users (
             id        INT UNIQUE NOT NULL,
@@ -47,7 +47,7 @@ jobs:
 
     - name: Run 2FA Test
       run: |
-        mysql -h 127.0.0.1 -P 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "SELECT 1"
+        mysql -h 127.0.0.1 -P 3306 -u root -e "SELECT 1"
         go run build/main.go &
         sleep 5
         generate_response=$(curl -s "http://127.0.0.1:8080/bella/2FA?action=generate" | tr -d '"')
