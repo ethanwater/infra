@@ -24,7 +24,10 @@ jobs:
       run: |
         sudo /etc/init.d/mysql start
         sleep 5
-    
+
+    - name: Check MySQL Service Status
+      run: sudo /etc/init.d/mysql status
+
     - name: Create Database
       run: |
         mysql -h 127.0.0.1 -P 3306 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS user_schema; USE user_schema;
