@@ -15,7 +15,7 @@ const (
 	VIVIAN_APP_NAME       string = "vivian.infra"
 	VIVIAN_LOGGER_SUCCESS string = "[vivian:success]"
 	VIVIAN_LOGGER_DEBUG   string = "[vivian:debug]"
-	VIVIAN_LOGGER_WARNING string = "[vivian:warn]"
+	VIVIAN_LOGGER_WARNING string = "[vivian:warning]"
 	VIVIAN_LOGGER_ERROR   string = "[vivian:error]"
 	VIVIAN_LOGGER_FATAL   string = "[vivian:fatal]"
 )

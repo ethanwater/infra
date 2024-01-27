@@ -19,6 +19,7 @@ var upgrader = websocket.Upgrader{
 		return true
 	},
 }
+
 var calls atomic.Int32
 
 func HandleWebSocketTimestamp(ctx context.Context) http.Handler {
@@ -31,13 +32,13 @@ func HandleWebSocketTimestamp(ctx context.Context) http.Handler {
 		}
 		defer conn.Close()
 
-		reconnectChannel := make(chan int)
-		defer close(reconnectChannel)
+		disconnectChannel := make(chan int)
+		defer close(disconnectChannel)
 
 		go func() {
 			for {
 				select {
-				case <-reconnectChannel:
+				case <-disconnectChannel:
 					VivianServerLogger.LogDebug("handshake disconnected")
 					return
 				case <-ctx.Done():
@@ -53,14 +54,14 @@ func HandleWebSocketTimestamp(ctx context.Context) http.Handler {
 				VivianServerLogger.LogWarning("lost context")
 				return
 			default:
-				timestamp, _ := socket.Time(ctx)
-				calls.Add(1)
-				err := conn.WriteMessage(websocket.TextMessage, timestamp)
+				timestamp := socket.TimeRFC3339Local()
+				//if err != nil {
+				//	VivianServerLogger.LogError("", err)
+				//}
+				err = conn.WriteMessage(websocket.TextMessage, timestamp)
 				if err != nil {
-					//if err := app.socket.Get().LoggerSocket(ctx, "vivian: socket: [error] disconnected <- broken pipe ?"); err != nil {
-					//	app.Logger(ctx).Error("vivian: socket: [error]", "err", err)
-					//}
-					reconnectChannel <- 1
+					VivianServerLogger.LogWarning(fmt.Sprintf("%v", err))
+					disconnectChannel <- 1
 					return
 				}
 				time.Sleep(time.Second)
