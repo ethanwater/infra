@@ -1,14 +1,13 @@
 package app
 
-
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
-	"fmt"
 
 	"github.com/gorilla/websocket"
 	"vivian.infra/internal/pkg/socket"
@@ -24,6 +23,9 @@ var calls atomic.Int32
 
 func HandleWebSocketTimestamp(ctx context.Context) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		VivianServerLogger.SetProtocol(1)
+		defer VivianServerLogger.DefaultProtocol()
+
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			VivianServerLogger.LogError("vivian: socket: [error] handshake failure", err)
@@ -80,6 +82,9 @@ var socketSync sync.Mutex
 
 func SocketCalls(ctx context.Context) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		VivianServerLogger.SetProtocol(1)
+		defer VivianServerLogger.DefaultProtocol()
+
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			VivianServerLogger.LogError("handshake failure", websocket.ErrBadHandshake)
@@ -123,7 +128,7 @@ func SocketCalls(ctx context.Context) http.Handler {
 				//	X: uint32(login.LoginSuccess.Load()),
 				//	Y: uint32(login.LoginFailure.Load()),
 				//}
-				marshal_data, err := json.Marshal(uint32(calls.Load()))
+				marshal_data, _ := json.Marshal(uint32(calls.Load()))
 				//if err != nil {
 				//	app.Logger(ctx).Error("vivian: socket: [error]", "err", "unable to marshalize data")
 				//}
