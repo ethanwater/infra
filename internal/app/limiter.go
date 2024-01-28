@@ -45,7 +45,7 @@ func (l *Limiter) RateLimiter() {
 				if l.requestChannelCounter >= 10 {
 					VivianServerLogger.LogWarning(fmt.Sprintf("blocked channel {status code:%v}", http.StatusTooManyRequests))
 				}
-				//fmt.Println("Channel Len:", len(l.requestChannel), "Channel Cap:", cap(l.requestChannel), "Pool:", l.requestChannelCounter)
+				//debugging: fmt.Println("Channel Len:", len(l.requestChannel), "Channel Cap:", cap(l.requestChannel), "Pool:", l.requestChannelCounter)
 				if l.requestChannelCounter > 0 {
 					l.requestChannelCounter -= BUCKET_LIMITER_LEAK_AMT
 				} else {

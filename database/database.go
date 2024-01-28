@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
+	"vivian.infra/models"
 	"vivian.infra/utils"
 )
 
@@ -16,7 +17,7 @@ const (
 
 type T interface {
 	InitDatabase(context.Context) error
-	FetchAccount(context.Context, string) (Account, error)
+	FetchAccount(context.Context, string) (models.Account, error)
 }
 
 type ConfigSQL struct {
@@ -37,15 +38,8 @@ func (config *ConfigSQL) InitDatabase(ctx context.Context, s *utils.VivianLogger
 	return config.Database.Ping()
 }
 
-type Account struct {
-	ID       int
-	Alias    string
-	Email    string
-	Password string
-}
-
-func FetchAccount(db *sql.DB, alias string) (Account, error) {
-	var account Account
+func FetchAccount(db *sql.DB, alias string) (models.Account, error) {
+	var account models.Account
 
 	_, err := db.Exec("USE user_schema")
 	if err != nil {
@@ -54,16 +48,16 @@ func FetchAccount(db *sql.DB, alias string) (Account, error) {
 
 	stmt, err := db.Prepare("SELECT * FROM users WHERE alias = ?")
 	if err != nil {
-		return Account{}, fmt.Errorf("failed to prepare statement: %w", err)
+		return models.Account{}, fmt.Errorf("failed to prepare statement: %w", err)
 	}
 	defer stmt.Close()
 
 	err = stmt.QueryRow(alias).Scan(&account.ID, &account.Alias, &account.Email, &account.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return Account{}, fmt.Errorf("no account found for email: %w", err)
+			return models.Account{}, fmt.Errorf("no account found for email: %w", err)
 		}
-		return Account{}, fmt.Errorf("failed to fetch account: %w", err)
+		return models.Account{}, fmt.Errorf("failed to fetch account: %w", err)
 	}
 	return account, nil
 }

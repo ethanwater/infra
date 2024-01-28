@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -11,9 +10,6 @@ import (
 	"sync"
 	"time"
 
-	_ "embed"
-
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"vivian.infra/database"
 	"vivian.infra/utils"
@@ -49,9 +45,9 @@ func Deploy(ctx context.Context) error {
 	router := mux.NewRouter()
 	router.Handle("/{alias}/2FA", authentication2FA(ctx)).Methods("GET")
 	router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
-	router.Handle("/ws", HandleWebSocketTimestamp(ctx))
+	router.Handle("/sockettime", HandleWebSocketTimestamp(ctx))
 
-	deploymentID := generateDeploymentID()
+	deploymentID := utils.GenerateDeploymentID()
 	vivianServer := &Server{
 		DeploymentID:       deploymentID,
 		Logger:             &utils.VivianLogger{Logger: log.New(os.Stdout, "", log.Lmsgprefix), DeploymentID: deploymentID},
@@ -80,7 +76,7 @@ func Deploy(ctx context.Context) error {
 		ReadTimeout:  vivianServer.VivianReadTimeout,
 		WriteTimeout: vivianServer.VivianWriteTimeout,
 	}
-	vivianServer.Logger.LogDeployment(VivianDatabase.Ping() == nil)
+	vivianServer.Logger.LogDeployment(VivianDatabase.Ping() == nil, VIVIAN_APP_NAME)
 
 	go func() {
 		<-ctx.Done()
@@ -88,13 +84,4 @@ func Deploy(ctx context.Context) error {
 	}()
 
 	return http.ListenAndServe(vivianServer.Addr, vivianServer.Handler)
-}
-
-func generateDeploymentID() string {
-	randomUUID := uuid.New()
-	shortUUID := fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-		randomUUID[:4], randomUUID[4:6], randomUUID[6:8],
-		randomUUID[8:10], randomUUID[10:])
-
-	return shortUUID
 }

@@ -12,12 +12,13 @@ import (
 )
 
 const (
-	VIVIAN_APP_NAME       string = "vivian.infra"
-	VIVIAN_LOGGER_SUCCESS string = "[vivian:success]"
-	VIVIAN_LOGGER_DEBUG   string = "[vivian:debug]"
-	VIVIAN_LOGGER_WARNING string = "[vivian:warning]"
-	VIVIAN_LOGGER_ERROR   string = "[vivian:error]"
-	VIVIAN_LOGGER_FATAL   string = "[vivian:fatal]"
+	VIVIAN_LOGGER_SUCCESS      string = "[vivian:success]"
+	VIVIAN_LOGGER_DEBUG        string = "[vivian:debug]"
+	VIVIAN_LOGGER_WARNING      string = "[vivian:warning]"
+	VIVIAN_LOGGER_ERROR        string = "[vivian:error]"
+	VIVIAN_LOGGER_FATAL        string = "[vivian:fatal]"
+	HTTP_PROTOCOL_DEPLOYMENT   string = "\033[35m"
+	SOCKET_PROTOCOL_DEPLOYMENT string = "\033[36m"
 )
 
 type VivianLogger struct {
@@ -25,11 +26,6 @@ type VivianLogger struct {
 	DeploymentID string
 	Protocol     uint16
 }
-
-var (
-	httpProtocolDeployment   = color.Purple
-	socketProtocolDeployment = color.Cyan
-)
 
 func (s *VivianLogger) logMessage(logLevel, msg string) {
 	_, file, line, ok := runtime.Caller(2)
@@ -42,9 +38,9 @@ func (s *VivianLogger) logMessage(logLevel, msg string) {
 	var deploymentProtocol string
 	switch s.Protocol {
 	case 1:
-		deploymentProtocol = color.Ize(socketProtocolDeployment, s.DeploymentID[:8])
+		deploymentProtocol = color.Ize(SOCKET_PROTOCOL_DEPLOYMENT, s.DeploymentID[:8])
 	default:
-		deploymentProtocol = color.Ize(httpProtocolDeployment, s.DeploymentID[:8])
+		deploymentProtocol = color.Ize(HTTP_PROTOCOL_DEPLOYMENT, s.DeploymentID[:8])
 	}
 
 	logMessage := fmt.Sprintf(
@@ -67,9 +63,9 @@ func (s *VivianLogger) DefaultProtocol() {
 	s.Protocol = 0
 }
 
-func (s *VivianLogger) LogDeployment(statusDB bool) {
+func (s *VivianLogger) LogDeployment(statusDB bool, app string) {
 	fmt.Printf("╭───────────────────────────────────────────────────╮\n")
-	fmt.Printf("│ app        : %-45s │\n", color.Ize(color.Cyan, VIVIAN_APP_NAME))
+	fmt.Printf("│ app        : %-45s │\n", color.Ize(color.Cyan, app))
 	fmt.Printf("│ database   : %-45s │\n", color.Ize(color.Green, fmt.Sprintf("status:%v", statusDB)))
 	fmt.Printf("│ deployment : %-36s │\n", color.Ize(color.Purple, s.DeploymentID))
 	fmt.Printf("╰───────────────────────────────────────────────────╯\n")

@@ -17,13 +17,10 @@ import (
 const (
 	CHARSET       string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	AUTH_KEY_SIZE int    = 5
+	HASH_COST     int    = 12
 )
 
-type Authenticator interface {
-	//Login
-	LoginUser(context.Context, string, string, *utils.VivianLogger) (bool, error)
-
-	//2FA
+type Authenticator2FA interface {
 	GenerateAuthKey2FA(context.Context, *utils.VivianLogger) (string, error)
 	VerifyAuthKey2FA(context.Context, string, *utils.VivianLogger) (bool, error)
 	ExpireAuthentication2FA(context.Context, *utils.VivianLogger) error
@@ -99,19 +96,19 @@ func VerifyAuthKey2FA(ctx context.Context, key string, s *utils.VivianLogger) (b
 	}
 
 	key = sanitize(key)
-	if sanitizeCheck(key) {
-		err := bcrypt.CompareHashAndPassword(hash.([]byte), []byte(key))
-		if err != nil {
-			s.LogWarning("invalid key")
-			return false, err
-		} else {
-			s.LogSuccess("verified key")
-			Expire2FA(ctx, s)
-			return true, nil
-		}
+	if !ensure2FA(key) {
+		s.LogWarning("invalid key")
+		return false, errors.New("invalid key")
 	}
 
-	return false, errors.New("failed to sanitize")
+	err := bcrypt.CompareHashAndPassword(hash.([]byte), []byte(key))
+	if err != nil {
+		return false, err
+	} else {
+		s.LogSuccess("verified key")
+		Expire2FA(ctx, s)
+		return true, nil
+	}
 }
 
 func Expire2FA(ctx context.Context, s *utils.VivianLogger) error {
