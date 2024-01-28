@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"vivian.infra/internal/app/database"
+	"vivian.infra/database"
 )
 
 func fetchUserAccount(ctx context.Context) http.Handler {

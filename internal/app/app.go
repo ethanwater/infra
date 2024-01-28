@@ -15,7 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"vivian.infra/internal/app/database"
+	"vivian.infra/database"
 	"vivian.infra/utils"
 )
 
