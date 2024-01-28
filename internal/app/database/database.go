@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
-	"vivian.infra/internal/utils"
+	"vivian.infra/utils"
 )
 
 const (

@@ -16,7 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"vivian.infra/internal/app/database"
-	"vivian.infra/internal/utils"
+	"vivian.infra/utils"
 )
 
 const (
@@ -46,61 +46,55 @@ var (
 )
 
 func Deploy(ctx context.Context) error {
-	s := buildServer(ctx, log.New(os.Stdout, "", log.Lmsgprefix))
-	VivianServerLogger = s.Logger
+	router := mux.NewRouter()
+	router.Handle("/{alias}/2FA", authentication2FA(ctx)).Methods("GET")
+	router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
+	router.Handle("/ws", HandleWebSocketTimestamp(ctx))
 
+	deploymentID := generateDeploymentID()
+	vivianServer := &Server{
+		DeploymentID:       deploymentID,
+		Logger:             &utils.VivianLogger{Logger: log.New(os.Stdout, "", log.Lmsgprefix), DeploymentID: deploymentID},
+		Handler:            router,
+		Addr:               VIVIAN_HOST_ADDR,
+		VivianReadTimeout:  VIVIAN_READWRITE_TIMEOUT,
+		VivianWriteTimeout: VIVIAN_READWRITE_TIMEOUT,
+	}
+	VivianServerLogger = vivianServer.Logger
+
+	vivianServer.mux.Lock()
 	configSQL := database.ConfigSQL{
 		Driver: "mysql",
 		Source: "root:@tcp(127.0.0.1:3306)/user_schema",
 	}
-
 	err := configSQL.InitDatabase(ctx, VivianServerLogger)
 	if err != nil {
 		VivianServerLogger.LogError("unable to connect to SQL database", err)
 	}
 	VivianDatabase = configSQL.Database
+	vivianServer.mux.Unlock()
 
-	s.mux.Lock()
-	defer s.mux.Unlock()
 	httpServer := &http.Server{
-		Addr:         s.Addr,
-		Handler:      s.Handler,
-		ReadTimeout:  s.VivianReadTimeout,
-		WriteTimeout: s.VivianWriteTimeout,
+		Addr:         vivianServer.Addr,
+		Handler:      vivianServer.Handler,
+		ReadTimeout:  vivianServer.VivianReadTimeout,
+		WriteTimeout: vivianServer.VivianWriteTimeout,
 	}
-	s.Logger.LogDeployment(VivianDatabase.Ping() == nil)
+	vivianServer.Logger.LogDeployment(VivianDatabase.Ping() == nil)
 
 	go func() {
 		<-ctx.Done()
 		httpServer.Shutdown(context.Background())
 	}()
 
-	return http.ListenAndServe(s.Addr, s.Handler)
+	return http.ListenAndServe(vivianServer.Addr, vivianServer.Handler)
 }
 
-func buildServer(ctx context.Context, logger *log.Logger) *Server {
-	generateDeploymentID := func() string {
-		randomUUID := uuid.New()
-		shortUUID := fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-			randomUUID[:4], randomUUID[4:6], randomUUID[6:8],
-			randomUUID[8:10], randomUUID[10:])
+func generateDeploymentID() string {
+	randomUUID := uuid.New()
+	shortUUID := fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		randomUUID[:4], randomUUID[4:6], randomUUID[6:8],
+		randomUUID[8:10], randomUUID[10:])
 
-		return shortUUID
-	}
-	deploymentID := generateDeploymentID()
-
-	router := mux.NewRouter()
-	vivianServer := &Server{
-		DeploymentID:       deploymentID,
-		Logger:             &utils.VivianLogger{Logger: logger, DeploymentID: deploymentID},
-		Handler:            router,
-		Addr:               VIVIAN_HOST_ADDR,
-		VivianReadTimeout:  VIVIAN_READWRITE_TIMEOUT,
-		VivianWriteTimeout: VIVIAN_READWRITE_TIMEOUT,
-	}
-
-	router.Handle("/{alias}/2FA", authentication2FA(ctx)).Methods("GET")
-	router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
-	router.Handle("/ws", HandleWebSocketTimestamp(ctx))
-	return vivianServer
+	return shortUUID
 }
