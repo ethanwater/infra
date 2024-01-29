@@ -21,3 +21,4 @@ func ensureLength(input string, target int) bool {
 func ensure2FA(input string) bool {
 	return ensureLength(input, AUTH_KEY_SIZE) && sanitizeCheck(input)
 }
+

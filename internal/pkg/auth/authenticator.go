@@ -17,7 +17,7 @@ import (
 const (
 	CHARSET       string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	AUTH_KEY_SIZE int    = 5
-	HASH_COST     int    = 12
+	HASH_COST     int    = 13
 )
 
 type Authenticator2FA interface {
@@ -38,11 +38,17 @@ func init() {
 }
 
 func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, error) {
+	var mu sync.Mutex
+	mu.Lock()
+	defer mu.Unlock()
+
 	if hashManagerAtomic.flag == 0 {
 		return "", errors.New("2FA has already been generated")
 	}
 
 	hashManagerAtomic.flag = 0
+
+	start := time.Now()
 
 	authKeyGeneration := func() string {
 		source := rand.New(rand.NewSource(time.Now().Unix()))
@@ -68,6 +74,7 @@ func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, err
 	}()
 	wg.Wait()
 
+	elapsed := time.Since(start)
 	hash := hashManagerAtomic.atomicValue.Load().([]byte)
 
 	if hash == nil {
@@ -75,7 +82,7 @@ func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, err
 		return "", nil
 	}
 
-	s.LogSuccess(fmt.Sprintf("authentication key generated: %v", authKey))
+	s.LogSuccess(fmt.Sprintf("authentication key generated: %v| %v", authKey, elapsed))
 	return authKey, nil
 }
 
