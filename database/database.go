@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"errors"
 
 	_ "github.com/go-sql-driver/mysql"
 	"vivian.infra/models"
@@ -48,16 +48,17 @@ func FetchAccount(db *sql.DB, alias string) (models.Account, error) {
 
 	stmt, err := db.Prepare("SELECT * FROM users WHERE alias = ?")
 	if err != nil {
-		return models.Account{}, fmt.Errorf("failed to prepare statement: %w", err)
+		return models.Account{}, errors.New("failed to prepare statement")
 	}
 	defer stmt.Close()
 
 	err = stmt.QueryRow(alias).Scan(&account.ID, &account.Alias, &account.Email, &account.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return models.Account{}, fmt.Errorf("no account found for email: %w", err)
+			return models.Account{}, errors.New("no account found for email")
 		}
-		return models.Account{}, fmt.Errorf("failed to fetch account: %w", err)
+		return models.Account{}, errors.New("failed to fetch account")
+
 	}
 	return account, nil
 }

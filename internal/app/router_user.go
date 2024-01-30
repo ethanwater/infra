@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -20,6 +21,16 @@ func fetchUserAccount(ctx context.Context) http.Handler {
 			return
 		}
 
+		bytes, err := json.Marshal(account)
+		if err != nil {
+			VivianServerLogger.LogError("failure marshalling results", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if _, err := fmt.Fprintln(w, string(bytes)); err != nil {
+			VivianServerLogger.LogError("failure writing results", err)
+			return
+		}
 		VivianServerLogger.LogSuccess(fmt.Sprintf("fetched account: {%v %v}", account.ID, account.Email))
 	})
 }

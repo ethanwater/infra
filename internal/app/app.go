@@ -33,7 +33,6 @@ type Server struct {
 	Addr               string
 	VivianReadTimeout  time.Duration
 	VivianWriteTimeout time.Duration
-	mux                sync.Mutex
 }
 
 var (
@@ -42,9 +41,24 @@ var (
 )
 
 func Deploy(ctx context.Context) error {
-	router := mux.NewRouter()
+	var mutex sync.Mutex
+	mutex.Lock()
+	configSQL := database.ConfigSQL{
+		Driver: "mysql",
+		Source: "root:@tcp(127.0.0.1:3306)/user_schema",
+	}
+	err := configSQL.InitDatabase(ctx, VivianServerLogger)
+	if err != nil {
+		VivianServerLogger.LogError("unable to connect to SQL database", err)
+	}
+	VivianDatabase = configSQL.Database
+	mutex.Unlock()
+
+	router := mux.NewRouter() //close some handlers off if failure connecting to database:
+	if VivianDatabase.Ping() == nil {
+		router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
+	}
 	router.Handle("/{alias}/2FA", authentication2FA(ctx)).Methods("GET")
-	router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
 	router.Handle("/sockettime", HandleWebSocketTimestamp(ctx))
 
 	deploymentID := utils.GenerateDeploymentID()
@@ -58,30 +72,18 @@ func Deploy(ctx context.Context) error {
 	}
 	VivianServerLogger = vivianServer.Logger
 
-	vivianServer.mux.Lock()
-	configSQL := database.ConfigSQL{
-		Driver: "mysql",
-		Source: "root:@tcp(127.0.0.1:3306)/user_schema",
-	}
-	err := configSQL.InitDatabase(ctx, VivianServerLogger)
-	if err != nil {
-		VivianServerLogger.LogError("unable to connect to SQL database", err)
-	}
-	VivianDatabase = configSQL.Database
-	vivianServer.mux.Unlock()
-
 	httpServer := &http.Server{
 		Addr:         vivianServer.Addr,
 		Handler:      vivianServer.Handler,
 		ReadTimeout:  vivianServer.VivianReadTimeout,
 		WriteTimeout: vivianServer.VivianWriteTimeout,
 	}
-	vivianServer.Logger.LogDeployment(VivianDatabase.Ping() == nil, VIVIAN_APP_NAME)
 
 	go func() {
 		<-ctx.Done()
 		httpServer.Shutdown(context.Background())
 	}()
 
+	vivianServer.Logger.LogDeployment(VivianDatabase.Ping() == nil, VIVIAN_APP_NAME)
 	return http.ListenAndServe(vivianServer.Addr, vivianServer.Handler)
 }
