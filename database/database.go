@@ -41,7 +41,7 @@ func (config *ConfigSQL) InitDatabase(ctx context.Context, s *utils.VivianLogger
 func FetchAccount(db *sql.DB, alias string) (models.Account, error) {
 	var account models.Account
 
-	_, err := db.Exec("USE user_schema")
+	_, err := db.Exec("USE vivian_test_db")
 	if err != nil {
 		VivianServerLogger.LogFatal("error searching database")
 	}

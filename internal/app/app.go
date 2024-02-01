@@ -45,7 +45,7 @@ func Deploy(ctx context.Context) error {
 	mutex.Lock()
 	configSQL := database.ConfigSQL{
 		Driver: "mysql",
-		Source: "root:@tcp(127.0.0.1:3306)/user_schema",
+		Source: "root:@tcp(127.0.0.1:3306)/vivian_test_db",
 	}
 	err := configSQL.InitDatabase(ctx, VivianServerLogger)
 	if err != nil {
