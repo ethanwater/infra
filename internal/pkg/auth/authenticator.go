@@ -17,7 +17,7 @@ import (
 const (
 	CHARSET       string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	AUTH_KEY_SIZE int    = 5
-	HASH_COST     int    = 13
+	HASH_COST     int    = 12 
 )
 
 type Authenticator2FA interface {

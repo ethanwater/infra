@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"vivian.infra/models"
@@ -35,7 +36,9 @@ func (config *ConfigSQL) InitDatabase(ctx context.Context, s *utils.VivianLogger
 	}
 	config.Database, VivianServerLogger = db, s
 
-	return config.Database.Ping()
+	timeoutContext, cancel := context.WithTimeout(ctx, time.Second * 5)
+	defer cancel()
+	return config.Database.PingContext(timeoutContext)
 }
 
 func FetchAccount(db *sql.DB, alias string) (models.Account, error) {

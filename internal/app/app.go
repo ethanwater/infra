@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -41,27 +40,9 @@ var (
 )
 
 func Deploy(ctx context.Context) error {
-	var mutex sync.Mutex
-	mutex.Lock()
-	configSQL := database.ConfigSQL{
-		Driver: "mysql",
-		Source: "root:@tcp(127.0.0.1:3306)/vivian_test_db",
-	}
-	err := configSQL.InitDatabase(ctx, VivianServerLogger)
-	if err != nil {
-		VivianServerLogger.LogError("unable to connect to SQL database", err)
-	}
-	VivianDatabase = configSQL.Database
-	mutex.Unlock()
-
-	router := mux.NewRouter() //close some handlers off if failure connecting to database:
-	if VivianDatabase.Ping() == nil {
-		router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
-	}
-	router.Handle("/{alias}/2FA", authentication2FA(ctx)).Methods("GET")
-	router.Handle("/sockettime", HandleWebSocketTimestamp(ctx))
-
+	router := mux.NewRouter() 
 	deploymentID := utils.GenerateDeploymentID()
+
 	vivianServer := &Server{
 		DeploymentID:       deploymentID,
 		Logger:             &utils.VivianLogger{Logger: log.New(os.Stdout, "", log.Lmsgprefix), DeploymentID: deploymentID},
@@ -71,6 +52,22 @@ func Deploy(ctx context.Context) error {
 		VivianWriteTimeout: VIVIAN_READWRITE_TIMEOUT,
 	}
 	VivianServerLogger = vivianServer.Logger
+
+	configSQL := database.ConfigSQL{
+		Driver: "mysql",
+		Source: "root:@tcp(127.0.0.1:3306)/vivian_test_db",
+	}
+	err := configSQL.InitDatabase(ctx, VivianServerLogger)
+	if err != nil {
+		vivianServer.Logger.LogDeployment(false, VIVIAN_APP_NAME)
+		VivianServerLogger.LogError("unable to connect to SQL database", err)
+	} else {
+		VivianDatabase = configSQL.Database
+	}
+
+	router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
+	router.Handle("/{alias}/2FA", authentication2FA(ctx)).Methods("GET")
+	router.Handle("/sockettime", HandleWebSocketTimestamp(ctx))
 
 	httpServer := &http.Server{
 		Addr:         vivianServer.Addr,
@@ -84,6 +81,5 @@ func Deploy(ctx context.Context) error {
 		httpServer.Shutdown(context.Background())
 	}()
 
-	vivianServer.Logger.LogDeployment(VivianDatabase.Ping() == nil, VIVIAN_APP_NAME)
 	return http.ListenAndServe(vivianServer.Addr, vivianServer.Handler)
 }
