@@ -40,7 +40,7 @@ var (
 )
 
 func Deploy(ctx context.Context) error {
-	router := mux.NewRouter() 
+	router := mux.NewRouter()
 	deploymentID := utils.GenerateDeploymentID()
 
 	vivianServer := &Server{
@@ -77,9 +77,16 @@ func Deploy(ctx context.Context) error {
 	}
 
 	go func() {
-		<-ctx.Done()
-		httpServer.Shutdown(context.Background())
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			vivianServer.Logger.LogError("server error", err)
+		}
 	}()
 
-	return http.ListenAndServe(vivianServer.Addr, vivianServer.Handler)
+	<-ctx.Done()
+
+	if err := httpServer.Close(); err != nil {
+		vivianServer.Logger.LogError("shutdown error", err)
+	}
+
+	return nil
 }
