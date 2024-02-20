@@ -17,6 +17,7 @@ func authentication2FA(ctx context.Context) http.Handler {
 
 		q := r.URL.Query()
 		action := strings.TrimSpace(q.Get("action"))
+		// curl "localhost:8080/bella/2FA?action="
 		switch action {
 		case "generate":
 			*RequestChannel <- 1

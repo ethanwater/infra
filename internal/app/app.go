@@ -68,6 +68,7 @@ func Deploy(ctx context.Context) error {
 	router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
 	router.Handle("/{alias}/2FA", authentication2FA(ctx)).Methods("GET")
 	router.Handle("/sockettime", HandleWebSocketTimestamp(ctx))
+	router.Handle("/{alias}/bucket/fetch", fetchBucketContents(ctx)).Methods("GET")
 
 	httpServer := &http.Server{
 		Addr:         vivianServer.Addr,
