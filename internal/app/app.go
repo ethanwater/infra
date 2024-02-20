@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"database/sql"
 	"log"
 	"net"
 	"net/http"
@@ -10,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"vivian.infra/database"
 	"vivian.infra/utils"
 )
 
@@ -36,7 +34,6 @@ type Server struct {
 
 var (
 	VivianServerLogger *utils.VivianLogger
-	VivianDatabase     *sql.DB
 )
 
 func Deploy(ctx context.Context) error {
@@ -52,20 +49,9 @@ func Deploy(ctx context.Context) error {
 		VivianWriteTimeout: VIVIAN_READWRITE_TIMEOUT,
 	}
 	VivianServerLogger = vivianServer.Logger
+	vivianServer.Logger.LogDeployment(false, VIVIAN_APP_NAME)
 
-	configSQL := database.ConfigSQL{
-		Driver: "mysql",
-		Source: "root:@tcp(127.0.0.1:3306)/vivian_test_db",
-	}
-	err := configSQL.InitDatabase(ctx, VivianServerLogger)
-	if err != nil {
-		vivianServer.Logger.LogDeployment(false, VIVIAN_APP_NAME)
-		VivianServerLogger.LogError("unable to connect to SQL database", err)
-	} else {
-		VivianDatabase = configSQL.Database
-	}
-
-	router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
+	//router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
 	router.Handle("/{alias}/2FA", authentication2FA(ctx)).Methods("GET")
 	router.Handle("/sockettime", HandleWebSocketTimestamp(ctx))
 	router.Handle("/{alias}/bucket/fetch", fetchBucketContents(ctx)).Methods("GET")
