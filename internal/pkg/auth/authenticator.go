@@ -82,7 +82,7 @@ func GenerateAuthKey2FA(ctx context.Context, s *utils.VivianLogger) (string, err
 		return "", nil
 	}
 
-	s.LogSuccess(fmt.Sprintf("authentication key generated: %v| %v", authKey, elapsed))
+	s.LogSuccess(fmt.Sprintf("authentication key generated: %v | %v", authKey, elapsed))
 	return authKey, nil
 }
 
