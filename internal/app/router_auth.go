@@ -61,7 +61,7 @@ func generateAuthentication2FA(w http.ResponseWriter, ctx context.Context) {
 		//	return
 		//}
 	case err := <-errorChan:
-		VivianServerLogger.LogError("unable to generate authentication 2FA: %v", err)
+		VivianServerLogger.LogError("unable to generate authentication 2FA", err)
 		return
 	}
 }
