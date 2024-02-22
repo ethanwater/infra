@@ -57,9 +57,6 @@ func HandleWebSocketTimestamp(ctx context.Context) http.Handler {
 				return
 			default:
 				timestamp := socket.TimeRFC3339Local()
-				//if err != nil {
-				//	VivianServerLogger.LogError("", err)
-				//}
 				err = conn.WriteMessage(websocket.TextMessage, timestamp)
 				if err != nil {
 					VivianServerLogger.LogWarning(fmt.Sprintf("%v", err))
@@ -74,12 +71,6 @@ func HandleWebSocketTimestamp(ctx context.Context) http.Handler {
 
 var liveConn *websocket.Conn
 var socketSync sync.Mutex
-
-//type liveData struct {
-//	X uint32 `json:"success"`
-//	Y uint32 `json:"failure"`
-//}
-
 func SocketCalls(ctx context.Context) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		VivianServerLogger.SetProtocol(1)
@@ -117,25 +108,13 @@ func SocketCalls(ctx context.Context) http.Handler {
 			}
 		}()
 
-		//var once sync.Once
 		for {
 			select {
 			case <-ctx.Done():
 				VivianServerLogger.LogWarning("lost context")
 				return
 			default:
-				//data := liveData{
-				//	X: uint32(login.LoginSuccess.Load()),
-				//	Y: uint32(login.LoginFailure.Load()),
-				//}
 				marshal_data, _ := json.Marshal(uint32(calls.Load()))
-				//if err != nil {
-				//	app.Logger(ctx).Error("vivian: socket: [error]", "err", "unable to marshalize data")
-				//}
-				//log current count per refresh
-				//once.Do(func(){
-				//	app.Logger(ctx).Debug("vivian: socket: [ok] timestamp.calls", "amt", data)
-				//})
 				err = liveConn.WriteMessage(websocket.TextMessage, marshal_data)
 				if err != nil {
 					VivianServerLogger.LogError("disconnected <- broken pipe?", err)

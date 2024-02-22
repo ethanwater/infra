@@ -5,10 +5,12 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"time"
 
 	"github.com/TwiN/go-color"
+	"github.com/google/uuid"
 )
 
 const (
@@ -63,11 +65,47 @@ func (s *VivianLogger) DefaultProtocol() {
 	s.Protocol = 0
 }
 
-func (s *VivianLogger) LogDeployment(statusDB bool, app string) {
+func generateDeploymentID() string {
+	randomUUID := uuid.New()
+	shortUUID := fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		randomUUID[:4], randomUUID[4:6], randomUUID[6:8],
+		randomUUID[8:10], randomUUID[10:])
+
+	return shortUUID
+}
+
+func (s *VivianLogger) Deploy(statusDB bool) {
+	wd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	projectName := filepath.Base(wd)
+
+	deploymentID := generateDeploymentID()
+	s.DeploymentID = deploymentID
+
 	fmt.Printf("╭───────────────────────────────────────────────────╮\n")
-	fmt.Printf("│ app        : %-45s │\n", color.Ize(color.Cyan, app))
-	fmt.Printf("│ database   : %-45s │\n", color.Ize(color.Green, fmt.Sprintf("status:%v", statusDB)))
-	fmt.Printf("│ deployment : %-36s │\n", color.Ize(color.Purple, s.DeploymentID))
+	fmt.Printf("│ app        : %-45s │\n", color.Ize(color.Cyan, projectName))
+	fmt.Printf("│ deployment : %-36s │\n", color.Ize(color.Purple, deploymentID))
+	fmt.Printf("╰───────────────────────────────────────────────────╯\n")
+}
+
+func (s *VivianLogger) DeployLong(statusDB bool) {
+	wd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	projectName := filepath.Base(wd)
+
+	deploymentID := generateDeploymentID()
+	s.DeploymentID = deploymentID
+
+	fmt.Printf("╭───────────────────────────────────────────────────╮\n")
+	fmt.Printf("│ app        : %-45s │\n", color.Ize(color.Cyan, projectName))
+	//fmt.Printf("│ database   : %-45s │\n", color.Ize(color.Green, fmt.Sprintf("status:%v", statusDB)))
+	fmt.Printf("│ deployment : %-36s │\n", color.Ize(color.Purple, deploymentID))
 	fmt.Printf("╰───────────────────────────────────────────────────╯\n")
 }
 

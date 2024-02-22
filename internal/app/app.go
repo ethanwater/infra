@@ -23,7 +23,7 @@ type ServerInitialization interface {
 }
 
 type Server struct {
-	DeploymentID       string
+	DeploymentID       *string
 	Listener           net.Listener
 	Handler            http.Handler
 	Logger             *utils.VivianLogger
@@ -38,18 +38,16 @@ var (
 
 func Deploy(ctx context.Context) error {
 	router := mux.NewRouter()
-	deploymentID := utils.GenerateDeploymentID()
 
 	vivianServer := &Server{
-		DeploymentID:       deploymentID,
-		Logger:             &utils.VivianLogger{Logger: log.New(os.Stdout, "", log.Lmsgprefix), DeploymentID: deploymentID},
+		Logger:             &utils.VivianLogger{Logger: log.New(os.Stdout, "", log.Lmsgprefix)},
 		Handler:            router,
 		Addr:               VIVIAN_HOST_ADDR,
 		VivianReadTimeout:  VIVIAN_READWRITE_TIMEOUT,
 		VivianWriteTimeout: VIVIAN_READWRITE_TIMEOUT,
 	}
 	VivianServerLogger = vivianServer.Logger
-	vivianServer.Logger.LogDeployment(false, VIVIAN_APP_NAME)
+	vivianServer.Logger.Deploy(false)
 
 	//router.Handle("/{alias}/fetch", fetchUserAccount(ctx)).Methods("GET")
 	router.Handle("/{alias}/2FA", authentication2FA(ctx)).Methods("GET")

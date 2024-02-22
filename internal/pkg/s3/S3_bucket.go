@@ -11,7 +11,7 @@ import (
 )
 
 func FetchBucketObjects() ([]*s3.Object, error) {
-	//init_config()
+	init_config()
 	sess, err := session.NewSession(&aws.Config{Region: aws.String((os.Getenv("AWS_REGION")))})
 	if err != nil {
 		return nil, err
