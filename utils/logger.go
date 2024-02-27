@@ -7,8 +7,8 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/TwiN/go-color"
 	"github.com/google/uuid"
@@ -24,13 +24,14 @@ const (
 	SOCKET_PROTOCOL_DEPLOYMENT string = "\033[36m"
 )
 
-var LogWriter string 
+var LogWriter string
 
 type VivianLogger struct {
+	ProjectName  string
 	Logger       *log.Logger
 	DeploymentID string
 	Protocol     uint16
-	Mux sync.Mutex
+	Mux          sync.Mutex
 }
 
 func (s *VivianLogger) SetProtocol(protocol uint16) {
@@ -47,7 +48,7 @@ func (s *VivianLogger) Deploy(statusDB bool) {
 		fmt.Println("Error:", err)
 		return
 	}
-	projectName := filepath.Base(wd)
+	s.ProjectName = filepath.Base(wd)
 
 	deploymentID := generateDeploymentID()
 	s.DeploymentID = deploymentID
@@ -67,13 +68,11 @@ func (s *VivianLogger) Deploy(statusDB bool) {
 	defer f.Close()
 	LogWriter = logFileHeader
 
-
 	fmt.Printf("╭───────────────────────────────────────────────────╮\n")
-	fmt.Printf("│ app        : %-45s │\n", color.Ize(color.Cyan, projectName))
+	fmt.Printf("│ app        : %-45s │\n", color.Ize(color.Cyan, s.ProjectName))
 	fmt.Printf("│ deployment : %-36s │\n", color.Ize(color.Purple, deploymentID))
 	fmt.Printf("╰───────────────────────────────────────────────────╯\n")
 }
-
 
 func (s *VivianLogger) logMessage(logLevel, msg string, isError bool) {
 	_, file, line, ok := runtime.Caller(2)
@@ -95,7 +94,7 @@ func (s *VivianLogger) logMessage(logLevel, msg string, isError bool) {
 	default:
 		deploymentProtocol = color.Ize(HTTP_PROTOCOL_DEPLOYMENT, s.DeploymentID[:8])
 	}
-	
+
 	currentTime := time.Now().UTC().Format("2006-01-02 15:04:05")
 	displayLogMessage := fmt.Sprintf(
 		"%v %-35s %s %-25s %s",
@@ -105,8 +104,8 @@ func (s *VivianLogger) logMessage(logLevel, msg string, isError bool) {
 		logLevel,
 		displayMsg,
 	)
-	
-	s.Mux.Lock()	
+
+	s.Mux.Lock()
 	s.logToFile(msg, currentTime, filename, line)
 	s.Mux.Unlock()
 
@@ -161,4 +160,3 @@ func generateDeploymentID() string {
 
 	return shortUUID
 }
-
