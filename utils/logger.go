@@ -24,69 +24,68 @@ const (
 	SOCKET_PROTOCOL_DEPLOYMENT string = "\033[36m"
 )
 
-var LogWriter string
-
 type VivianLogger struct {
 	ProjectName  string
 	Logger       *log.Logger
-	DeploymentID string
-	Protocol     uint16
-	Mux          sync.Mutex
+	LogFile      string //assigned log file
+	DeploymentID string //shortened UUID
+	Protocol     uint16 // http: 0 | websocket: 1
+	mux          sync.Mutex
 }
 
-func (s *VivianLogger) SetProtocol(protocol uint16) {
-	s.Protocol = protocol
-}
+func (s *VivianLogger) Deploy(databaseConnectionStatus bool) {
+	deploymentUUID := uuid.New()
+	s.DeploymentID = fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		deploymentUUID[:4], deploymentUUID[4:6], deploymentUUID[6:8],
+		deploymentUUID[8:10], deploymentUUID[10:])
 
-func (s *VivianLogger) DefaultProtocol() {
-	s.Protocol = 0
-}
-
-func (s *VivianLogger) Deploy(statusDB bool) {
-	wd, err := os.Getwd()
+	workingDirectory, err := os.Getwd()
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		s.ProjectName = "null"
+	} else {
+		s.ProjectName = filepath.Base(workingDirectory)
 	}
-	s.ProjectName = filepath.Base(wd)
 
-	deploymentID := generateDeploymentID()
-	s.DeploymentID = deploymentID
-
-	currentTime := time.Now()
-	logFileHeader := fmt.Sprintf("logs/%d-%d-%d-%v.log",
-		currentTime.Year(),
-		currentTime.Month(),
-		currentTime.Day(),
-		deploymentID,
-	)
-
-	f, err := os.Create(logFileHeader)
-	if err != nil {
-		return
+	_, err = os.Stat("logs")
+	if os.IsNotExist(err) {
+		if err := os.Mkdir("logs", os.ModePerm); err != nil {
+			log.Fatal(err)
+		}
 	}
-	defer f.Close()
-	LogWriter = logFileHeader
 
-	fmt.Printf("╭───────────────────────────────────────────────────╮\n")
-	fmt.Printf("│ app        : %-45s │\n", color.Ize(color.Cyan, s.ProjectName))
-	fmt.Printf("│ deployment : %-36s │\n", color.Ize(color.Purple, deploymentID))
+	if len(s.LogFile) <= 0 {
+		currentTime := time.Now()
+		logFileHeader := fmt.Sprintf("logs/%d-%d-%d-%v.log",
+			currentTime.Year(),
+			currentTime.Month(),
+			currentTime.Day(),
+			s.DeploymentID,
+		)
+
+		f, err := os.Create(logFileHeader)
+		if err != nil {
+			return
+		}
+		defer f.Close() //blocks if the logs directory doesnt exist
+		s.LogFile = logFileHeader
+	}
+
+	fmt.Printf("╭───────────────────────────────────────────────────╮\n│ app        : %-45s │\n│ deployment : %-36s │\n", color.Ize(color.Cyan, s.ProjectName), color.Ize(color.Purple, s.DeploymentID))
+	if databaseConnectionStatus {
+		fmt.Printf("│ database : %-36s │\n", color.Ize(color.Purple, s.DeploymentID))
+	}
 	fmt.Printf("╰───────────────────────────────────────────────────╯\n")
 }
 
-func (s *VivianLogger) logMessage(logLevel, msg string, isError bool) {
+func (s *VivianLogger) logMessage(logLevel, msg string, isErrorMessage bool) {
+	invocationTime := time.Now().UTC().Format("2006-01-02 15:04:05")
 	_, file, line, ok := runtime.Caller(2)
 	if !ok {
 		fmt.Println("failed to get file information")
 		return
 	}
+	file = path.Base(file)
 
-	displayMsg := msg
-	if isError {
-		displayMsg = color.Ize(color.Yellow, msg)
-	}
-
-	filename := path.Base(file)
 	var deploymentProtocol string
 	switch s.Protocol {
 	case 1:
@@ -95,39 +94,41 @@ func (s *VivianLogger) logMessage(logLevel, msg string, isError bool) {
 		deploymentProtocol = color.Ize(HTTP_PROTOCOL_DEPLOYMENT, s.DeploymentID[:8])
 	}
 
-	currentTime := time.Now().UTC().Format("2006-01-02 15:04:05")
-	displayLogMessage := fmt.Sprintf(
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if isErrorMessage {
+		msg = color.Ize(color.Yellow, msg)
+	}
+
+	logServerMessage := fmt.Sprintf(
 		"%v %-35s %s %-25s %s",
-		currentTime,
-		color.Ize(color.Blue, fmt.Sprintf("%s:%v:", filename, line)),
+		invocationTime,
+		color.Ize(color.Blue, fmt.Sprintf("%s:%v:", file, line)),
 		deploymentProtocol,
 		logLevel,
-		displayMsg,
-	)
-
-	s.Mux.Lock()
-	s.logToFile(msg, currentTime, filename, line)
-	s.Mux.Unlock()
-
-	s.Logger.Print(displayLogMessage)
-}
-func (s *VivianLogger) logToFile(msg string, time string, filename string, line int) {
-
-	logMessage := fmt.Sprintf(
-		"%v %-35s %s %s",
-		time,
-		fmt.Sprintf("%s:%v:", filename, line),
-		s.DeploymentID[:8],
 		msg,
 	)
+	s.Logger.Print(logServerMessage)
 
-	log, err := os.OpenFile(LogWriter, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	go func() {
+		logFileMessage := fmt.Sprintf(
+			"%v %-35s %s %s",
+			invocationTime,
+			fmt.Sprintf("%s:%v:", file, line),
+			s.DeploymentID[:8],
+			msg,
+		)
+		s.logToFile(logFileMessage)
+	}()
+}
+func (s *VivianLogger) logToFile(msg string) error {
+	log, err := os.OpenFile(s.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return
+		return err
 	}
 	defer log.Close()
-
-	log.WriteString(fmt.Sprintf("%v\n", logMessage))
+	log.WriteString(fmt.Sprintf("%v\n", msg))
+	return nil
 }
 
 func (s *VivianLogger) LogSuccess(msg string) {
@@ -152,11 +153,10 @@ func (s *VivianLogger) LogFatal(msg string) {
 	os.Exit(1)
 }
 
-func generateDeploymentID() string {
-	randomUUID := uuid.New()
-	shortUUID := fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-		randomUUID[:4], randomUUID[4:6], randomUUID[6:8],
-		randomUUID[8:10], randomUUID[10:])
+func (s *VivianLogger) SetProtocol(protocol uint16) {
+	s.Protocol = protocol
+}
 
-	return shortUUID
+func (s *VivianLogger) DefaultProtocol() {
+	s.Protocol = 0
 }
