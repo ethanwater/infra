@@ -55,9 +55,17 @@ func (s *VivianLogger) Deploy(databaseConnectionStatus bool) {
 
 	if len(s.LogFile) <= 0 {
 		currentTime := time.Now()
-		logFileHeader := fmt.Sprintf("logs/%d-%d-%d-%v.log",
-			currentTime.Year(),
-			currentTime.Month(),
+		month := currentTime.Month()
+
+		_, err = os.Stat(fmt.Sprintf("%s/%s", "logs", month))
+		if os.IsNotExist(err) {
+			if err := os.Mkdir(fmt.Sprintf("%s/%s", "logs/", month), os.ModePerm); err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		logFileHeader := fmt.Sprintf("logs/%s/%d-%v.log",
+			month,
 			currentTime.Day(),
 			s.DeploymentID,
 		)
@@ -110,16 +118,14 @@ func (s *VivianLogger) logMessage(logLevel, msg string, isErrorMessage bool) {
 	)
 	s.Logger.Print(logServerMessage)
 
-	go func() {
-		logFileMessage := fmt.Sprintf(
-			"%v %-35s %s %s",
-			invocationTime,
-			fmt.Sprintf("%s:%v:", file, line),
-			s.DeploymentID[:8],
-			msg,
-		)
-		s.logToFile(logFileMessage)
-	}()
+	logFileMessage := fmt.Sprintf(
+		"%v %-35s %s %s",
+		invocationTime,
+		fmt.Sprintf("%s:%v:", file, line),
+		s.DeploymentID[:8],
+		msg,
+	)
+	s.logToFile(logFileMessage)
 }
 func (s *VivianLogger) logToFile(msg string) error {
 	log, err := os.OpenFile(s.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
