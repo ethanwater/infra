@@ -34,6 +34,9 @@ func HandleWebSocketTimestamp(ctx context.Context) http.Handler {
 		}
 		defer conn.Close()
 
+		//disconnectChannel is utter dogshit, not reliable
+		//is it necessary? we should fix.
+
 		disconnectChannel := make(chan int)
 		defer close(disconnectChannel)
 
