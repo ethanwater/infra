@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,7 +8,7 @@ import (
 	"vivian.infra/internal/pkg/s3"
 )
 
-func fetchBucketContents(ctx context.Context) http.Handler {
+func fetchBucketContents() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		contents, err := s3.FetchBucketObjects()
 		if err != nil {

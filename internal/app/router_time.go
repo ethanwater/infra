@@ -34,9 +34,6 @@ func HandleWebSocketTimestamp(ctx context.Context) http.Handler {
 		}
 		defer conn.Close()
 
-		//disconnectChannel is utter dogshit, not reliable
-		//is it necessary? we should fix.
-
 		disconnectChannel := make(chan int)
 		defer close(disconnectChannel)
 
@@ -74,6 +71,7 @@ func HandleWebSocketTimestamp(ctx context.Context) http.Handler {
 
 var liveConn *websocket.Conn
 var socketSync sync.Mutex
+
 func SocketCalls(ctx context.Context) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		VivianServerLogger.SetProtocol(1)
@@ -98,6 +96,7 @@ func SocketCalls(ctx context.Context) http.Handler {
 		reconnectChannel := make(chan int)
 		defer close(reconnectChannel)
 
+		//TODO: does this even work?
 		go func() {
 			for {
 				select {
