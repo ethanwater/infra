@@ -99,7 +99,7 @@ func verifyAuthentication2FA(w http.ResponseWriter, ctx context.Context, key2FA 
 	}
 }
 
-func expireAuthentication2FA(w http.ResponseWriter, ctx context.Context) {
+func expireAuthentication2FA(_ http.ResponseWriter, ctx context.Context) {
 	err := auth.Expire2FA(ctx, VivianServerLogger)
 	if err != nil {
 		VivianServerLogger.LogError("failed to expire 2FA ->", err)

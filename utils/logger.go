@@ -104,6 +104,15 @@ func (s *VivianLogger) logMessage(logLevel, msg string, isErrorMessage bool) {
 
 	s.mux.Lock()
 	defer s.mux.Unlock()
+	logFileMessage := fmt.Sprintf(
+		"%v %-35s %s %s",
+		invocationTime,
+		fmt.Sprintf("%s:%v:", file, line),
+		s.DeploymentID[:8],
+		msg,
+	)
+	s.logToFile(logFileMessage)
+
 	if isErrorMessage {
 		msg = color.Ize(color.Yellow, msg)
 	}
@@ -118,14 +127,6 @@ func (s *VivianLogger) logMessage(logLevel, msg string, isErrorMessage bool) {
 	)
 	s.Logger.Print(logServerMessage)
 
-	logFileMessage := fmt.Sprintf(
-		"%v %-35s %s %s",
-		invocationTime,
-		fmt.Sprintf("%s:%v:", file, line),
-		s.DeploymentID[:8],
-		msg,
-	)
-	s.logToFile(logFileMessage)
 }
 func (s *VivianLogger) logToFile(msg string) error {
 	log, err := os.OpenFile(s.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
