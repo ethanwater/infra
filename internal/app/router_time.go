@@ -97,6 +97,7 @@ func SocketCalls(ctx context.Context) http.Handler {
 		defer close(reconnectChannel)
 
 		//TODO: does this even work?
+		//should probably write a testcase for this shit im ngl
 		go func() {
 			for {
 				select {

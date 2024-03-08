@@ -17,7 +17,6 @@ func authentication2FA(ctx context.Context) http.Handler {
 
 		q := r.URL.Query()
 		action := strings.TrimSpace(q.Get("action"))
-		// curl "localhost:8080/bella/2FA?action="
 		switch action {
 		case "generate":
 			*RequestChannel <- 1
@@ -56,6 +55,7 @@ func generateAuthentication2FA(w http.ResponseWriter, ctx context.Context) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		//this just fucking prints it to the client, probably good for JS.
 		//if _, err := fmt.Fprintln(w, "2FA generation successful"); err != nil {
 		//	VivianServerLogger.LogError("Failure writing results", err)
 		//	return

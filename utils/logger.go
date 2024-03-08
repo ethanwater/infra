@@ -27,9 +27,10 @@ const (
 type VivianLogger struct {
 	ProjectName  string
 	Logger       *log.Logger
-	LogFile      string //assigned log file
+	LogFile      string 
+	LogDirectory string 
 	DeploymentID string //shortened UUID
-	Protocol     uint16 // http: 0 | websocket: 1
+	Protocol     uint16 
 	mux          sync.Mutex
 }
 
@@ -38,45 +39,7 @@ func (s *VivianLogger) Deploy(databaseConnectionStatus bool) {
 	s.DeploymentID = fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
 		deploymentUUID[:4], deploymentUUID[4:6], deploymentUUID[6:8],
 		deploymentUUID[8:10], deploymentUUID[10:])
-
-	workingDirectory, err := os.Getwd()
-	if err != nil {
-		s.ProjectName = "null"
-	} else {
-		s.ProjectName = filepath.Base(workingDirectory)
-	}
-
-	_, err = os.Stat("logs")
-	if os.IsNotExist(err) {
-		if err := os.Mkdir("logs", os.ModePerm); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	if len(s.LogFile) <= 0 {
-		currentTime := time.Now()
-		month := currentTime.Month()
-
-		_, err = os.Stat(fmt.Sprintf("%s/%s", "logs", month))
-		if os.IsNotExist(err) {
-			if err := os.Mkdir(fmt.Sprintf("%s/%s", "logs/", month), os.ModePerm); err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		logFileHeader := fmt.Sprintf("logs/%s/%d-%v.log",
-			month,
-			currentTime.Day(),
-			s.DeploymentID,
-		)
-
-		f, err := os.Create(logFileHeader)
-		if err != nil {
-			return
-		}
-		defer f.Close() //blocks if the logs directory doesnt exist
-		s.LogFile = logFileHeader
-	}
+	s.LogRefresh(s.LogDirectory)
 
 	fmt.Printf("╭───────────────────────────────────────────────────╮\n│ app        : %-45s │\n│ deployment : %-36s │\n", color.Ize(color.Cyan, s.ProjectName), color.Ize(color.Purple, s.DeploymentID))
 	if databaseConnectionStatus {
@@ -160,10 +123,62 @@ func (s *VivianLogger) LogFatal(msg string) {
 	os.Exit(1)
 }
 
+func (s *VivianLogger) DefaultProtocol() {
+	s.Protocol = 0
+}
+
+//*****PROTOCOL MAPPINGS*****
+//HTTP:        0
+//SOCKET:      1
 func (s *VivianLogger) SetProtocol(protocol uint16) {
 	s.Protocol = protocol
 }
 
-func (s *VivianLogger) DefaultProtocol() {
-	s.Protocol = 0
+
+func (s *VivianLogger) LogRefresh(targetLogDirectory string) {
+	if len(targetLogDirectory) <= 0 {
+		return
+	}
+	s.LogDirectory = targetLogDirectory
+	
+workingDirectory, err := os.Getwd()
+	if err != nil {
+		s.ProjectName = "null"
+	} else {
+		s.ProjectName = filepath.Base(workingDirectory)
+	}
+
+	_, err = os.Stat(targetLogDirectory)
+	if os.IsNotExist(err) {
+		if err := os.Mkdir(targetLogDirectory, os.ModePerm); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if len(s.LogFile) <= 0 {
+		currentTime := time.Now()
+		month := currentTime.Month()
+
+		_, err = os.Stat(fmt.Sprintf("%s/%s", targetLogDirectory, month))
+		if os.IsNotExist(err) {
+			if err := os.Mkdir(fmt.Sprintf("%s/%s/", targetLogDirectory, month), os.ModePerm); err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		logFileHeader := fmt.Sprintf("%s/%s/%d-%v.log",
+			targetLogDirectory,
+			month,
+			currentTime.Day(),
+			s.DeploymentID,
+		)
+
+		f, err := os.Create(logFileHeader)
+		if err != nil {
+			return
+		}
+		defer f.Close() //blocks if the logs directory doesnt exist. TODO:fix this, blocks are lethal
+		
+		s.LogFile = logFileHeader
+	}
 }

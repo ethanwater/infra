@@ -32,15 +32,13 @@ type Server struct {
 	VivianWriteTimeout time.Duration
 }
 
-var (
-	VivianServerLogger *utils.VivianLogger
-)
+var VivianServerLogger *utils.VivianLogger
 
 func Deploy(ctx context.Context) error {
 	router := mux.NewRouter()
 
 	vivianServer := &Server{
-		Logger:             &utils.VivianLogger{Logger: log.New(os.Stdout, "", log.Lmsgprefix)},
+		Logger:             &utils.VivianLogger{Logger: log.New(os.Stdout, "", log.Lmsgprefix), LogDirectory: "logs"},
 		Handler:            router,
 		Addr:               VIVIAN_HOST_ADDR,
 		VivianReadTimeout:  VIVIAN_READWRITE_TIMEOUT,
