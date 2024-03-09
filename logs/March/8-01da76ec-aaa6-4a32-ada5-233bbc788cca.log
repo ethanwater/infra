@@ -1,0 +1,3 @@
+2024-03-09 03:33:28 router_time.go:33:                  01da76ec handshake success: remote:[::1]:59172 local:[::1]:8080
+2024-03-09 03:33:32 router_time.go:62:                  01da76ec write tcp [::1]:8080->[::1]:59172: write: broken pipe
+2024-03-09 03:33:32 router_time.go:44:                  01da76ec handshake disconnected
